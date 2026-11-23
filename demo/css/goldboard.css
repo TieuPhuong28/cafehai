@@ -1,0 +1,66 @@
+/* ===== Bảng vàng treo tường trong quán ===== */
+.gold-board {
+  position: absolute; top: 66px; right: 12px; width: 44%; max-width: 190px; padding: 6px; z-index: 2;
+  border-radius: 8px; transform: rotate(2deg); transition: transform .2s;
+  background: linear-gradient(135deg, #8a5a12, #f6d36b 25%, #b9851f 50%, #fbe39a 72%, #9b6a16);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, .55), 0 0 22px rgba(246, 211, 107, .35);
+  animation: goldglow 2.6s ease-in-out infinite;
+}
+.gold-board:active { transform: rotate(2deg) scale(.97); }
+@keyframes goldglow { 50% { box-shadow: 0 10px 22px rgba(0,0,0,.55), 0 0 34px rgba(246, 211, 107, .7); } }
+.gb-nail {
+  position: absolute; top: -14px; left: 50%; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%;
+  background: #d9d9d9; box-shadow: 0 1px 2px rgba(0,0,0,.6);
+}
+.gb-nail::before, .gb-nail::after {
+  content: ''; position: absolute; top: 6px; width: 2px; height: 26px; background: #c9a24a; transform-origin: top;
+}
+.gb-nail::before { left: 4px; transform: rotate(52deg); }
+.gb-nail::after { left: 4px; transform: rotate(-52deg); }
+.gb-inner {
+  display: flex; flex-direction: column; gap: 3px; padding: 8px 8px 9px; border-radius: 4px;
+  background: radial-gradient(ellipse at 50% 0%, #4a2a1a, #26150e 75%);
+  border: 1px solid rgba(251, 227, 154, .55); color: #fbe39a; text-align: left;
+}
+.gb-title {
+  text-align: center; font-weight: 900; font-size: 16px; letter-spacing: 2px;
+  background: linear-gradient(#fff4c8, #f2c14e 55%, #c08a1c); -webkit-background-clip: text; background-clip: text; color: transparent;
+  text-shadow: 0 1px 0 rgba(0,0,0,.2);
+}
+.gb-sub { text-align: center; font-size: 9.5px; color: #d8b86a; font-style: italic; margin-bottom: 3px; border-bottom: 1px solid rgba(251, 227, 154, .3); padding-bottom: 4px; }
+.gb-row { display: flex; align-items: center; gap: 5px; font-size: 12px; }
+.gb-row i { font-style: normal; font-size: 14px; }
+.gb-row span { flex: 1; font-weight: 700; color: #fff1cf; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gb-row b { font-weight: 900; color: #f6d36b; font-size: 12px; }
+.gb-empty { font-size: 11px; text-align: center; color: #d8b86a; padding: 6px 0; }
+
+/* dời khung ảnh xuống dưới bảng vàng */
+.scene .photo-frame { top: 236px; width: 24%; max-width: 110px; right: 20px; }
+
+/* ===== Bảng tin (quầy thông tin) ===== */
+.info-board {
+  position: absolute; top: 218px; right: 14px; width: 40%; max-width: 175px; z-index: 2; padding: 8px 9px 9px;
+  background: #24352a; border: 6px solid #8a5a36; border-radius: 6px; transform: rotate(-2deg);
+  display: flex; flex-direction: column; gap: 3px; text-align: left; color: #f3f0e6;
+  box-shadow: 0 8px 16px rgba(0,0,0,.5), inset 0 0 18px rgba(0,0,0,.4);
+  font-family: 'Be Vietnam Pro', sans-serif; animation: chalk 3s ease-in-out infinite;
+}
+.info-board:active { transform: rotate(-2deg) scale(.97); }
+@keyframes chalk { 50% { box-shadow: 0 8px 16px rgba(0,0,0,.5), inset 0 0 18px rgba(0,0,0,.4), 0 0 0 3px rgba(242,182,50,.45); } }
+.ib-title { font-weight: 900; font-size: 13px; letter-spacing: 1px; color: #ffd76a; text-align: center; border-bottom: 1px dashed rgba(255,255,255,.3); padding-bottom: 3px; margin-bottom: 1px; }
+.ib-line { font-size: 11px; font-weight: 600; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ib-line.dim { opacity: .6; font-style: italic; }
+.ib-more { font-size: 10px; color: #ffd76a; text-align: right; font-weight: 700; margin-top: 2px; }
+.info-paper h2 { color: var(--maroon); }
+.deal { display: grid; grid-template-columns: 30px 1fr auto; grid-template-rows: auto auto; gap: 4px 8px; align-items: center; padding: 10px 6px; border-bottom: 1px dashed #d8c4a4; }
+.deal .de { font-size: 22px; grid-row: 1 / 3; align-self: start; }
+.deal .dt { display: flex; flex-direction: column; min-width: 0; }
+.deal .dt b { color: var(--brown); font-size: 15px; }
+.deal .dt small { color: var(--muted); font-size: 12.5px; }
+.deal .dt em { font-style: normal; font-size: 11.5px; color: #2f8a3a; font-weight: 700; }
+.deal .dp { font-weight: 900; color: var(--maroon); white-space: nowrap; text-align: right; }
+.deal .btn { grid-column: 2 / 4; justify-self: end; flex: none; padding: 7px 14px; }
+.deal.hot { background: linear-gradient(90deg, rgba(242,182,50,.16), transparent); border-radius: 10px; }
+.deal.off { opacity: .55; }
+.deal.off em { color: var(--muted); }
+.deal.note .dt { grid-column: 2 / 4; }

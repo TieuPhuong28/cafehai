@@ -1,0 +1,465 @@
+// ===== Quầy: quản lý menu =====
+// 4 mục con: Món · Hoa quả hôm nay · Khuyến mãi · Điểm số
+(() => {
+  const $m = document.getElementById('menuView');
+  const escM = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const svgSrc = s => 'data:image/svg+xml,' + encodeURIComponent(s);
+  const ss = { get: (k, d) => { try { return sessionStorage.getItem(k) || d; } catch { return d; } }, set: (k, v) => { try { sessionStorage.setItem(k, v); } catch {} } };
+
+  // trạng thái giao diện
+  let sub = ss.get('cafehai.qsub', 'items');
+  let filter = 'all', query = '', modal = null, promoType = 'discount';
+  const collapsed = new Set();
+
+  // ----- tab lớn: Đơn hàng / Quản lý menu -----
+  document.querySelectorAll('.qtabs button').forEach(b => b.addEventListener('click', () => {
+    const t = b.dataset.tab;
+    document.querySelectorAll('.qtabs button').forEach(x => x.classList.toggle('on', x === b));
+    document.getElementById('ordersView').classList.toggle('hidden', t !== 'orders');
+    $m.classList.toggle('hidden', t !== 'menu');
+    document.getElementById('stats').classList.toggle('hidden', t !== 'orders');
+    ss.set('cafehai.qtab', t);
+    if (t === 'menu') render();
+  }));
+
+  // ----- tiện ích -----
+  const sw = (on, act, id, label) =>
+    `<button class="sw ${on ? 'on' : ''}" data-m="${act}" data-id="${id}" role="switch" aria-checked="${on}"><i></i><span>${label}</span></button>`;
+  const ic = (on, act, id, icon, title) =>
+    `<button class="ic ${on ? 'on' : ''}" data-m="${act}" data-id="${id}" title="${title}" aria-label="${title}" aria-pressed="${on}">${icon}</button>`;
+  const pct = x => Math.round(x * 100);
+  const num = n => Math.round(n).toLocaleString('vi-VN');
+  const fruitIcon = (f, size = 22) => (f.svg ? `<img src="${svgSrc(f.svg)}" width="${size}" height="${size}" alt="">` : f.icon);
+
+  function stats() {
+    const list = MenuAdmin.adminList();
+    const vis = list.filter(d => !d.hidden);
+    return {
+      list,
+      total: list.length,
+      selling: vis.filter(d => !d.outReason).length,
+      out: vis.filter(d => d.outReason).length,
+      hidden: list.filter(d => d.hidden).length,
+      sale: vis.filter(d => d.sale && d.sale < d.price).length,
+      featured: vis.filter(d => d.featured).length,
+      isNew: vis.filter(d => d.isNew).length,
+      fruitOut: Object.keys(MenuAdmin.load().fruitOut).length,
+      promos: Promo.load().filter(p => p.active).length,
+    };
+  }
+
+  // ===================== khung chính =====================
+  function render() {
+    const s = stats();
+    const tabs = [
+      ['items', '🍽️ Món', `${s.selling}/${s.total - s.hidden}`],
+      ['fruits', '🍊 Hoa quả hôm nay', s.fruitOut ? `${s.fruitOut} hết` : 'đủ'],
+      ['promos', '🎁 Khuyến mãi', `${s.promos} bật`],
+      ['points', '🏆 Điểm số', POINT_CFG === null ? '' : (MenuAdmin.load().points ? 'tùy chỉnh' : 'mặc định')],
+    ];
+    $m.innerHTML = `
+    <div class="mm-top">
+      <div class="mm-sum">
+        <span class="pill-s ok">🟢 ${s.selling} đang bán</span>
+        ${s.out ? `<span class="pill-s bad">🔴 ${s.out} hết hàng</span>` : ''}
+        ${s.hidden ? `<span class="pill-s mute">🙈 ${s.hidden} đang ẩn</span>` : ''}
+        ${s.sale ? `<span class="pill-s sale">🏷️ ${s.sale} giảm giá</span>` : ''}
+        ${s.promos ? `<span class="pill-s sale">🎁 ${s.promos} khuyến mãi</span>` : ''}
+      </div>
+      <button class="btn green" data-m="newDay" title="Bỏ tất cả đánh dấu hết hàng và hết quả">🌅 Mở ca mới</button>
+    </div>
+    <nav class="subnav">${tabs.map(([id, label, badge]) => `
+      <button class="${sub === id ? 'on' : ''}" data-m="sub" data-id="${id}">${label}${badge ? `<small>${badge}</small>` : ''}</button>`).join('')}
+    </nav>
+    <div id="mmBody">${sub === 'items' ? itemsHTML(s) : sub === 'fruits' ? fruitsHTML() : sub === 'promos' ? promosHTML() : pointsHTML()}</div>
+    ${modal ? modalHTML() : ''}`;
+    if (sub === 'points') updatePreview();
+    if (modal) setTimeout(() => $m.querySelector('.modal input, .modal select')?.focus(), 30);
+  }
+
+  // ===================== MÓN =====================
+  const FILTERS = [
+    ['all', 'Tất cả'], ['selling', 'Đang bán'], ['out', 'Hết hàng'], ['hidden', 'Đang ẩn'],
+    ['sale', 'Giá giảm'], ['featured', 'Trên bảng tin'], ['new', 'Món mới'], ['custom', 'Tự thêm'],
+  ];
+  const match = d => {
+    if (query && !d.name.toLowerCase().includes(query.toLowerCase())) return false;
+    switch (filter) {
+      case 'selling': return !d.hidden && !d.outReason;
+      case 'out': return !d.hidden && !!d.outReason;
+      case 'hidden': return d.hidden;
+      case 'sale': return d.sale && d.sale < d.price;
+      case 'featured': return d.featured;
+      case 'new': return d.isNew;
+      case 'custom': return d.custom;
+    }
+    return true;
+  };
+
+  function itemsHTML(s) {
+    const counts = Object.fromEntries(FILTERS.map(([id]) => { const f0 = filter; filter = id; const q0 = query; query = ''; const n = s.list.filter(match).length; filter = f0; query = q0; return [id, n]; }));
+    return `
+    <div class="toolbar">
+      <label class="search">🔍<input id="mmSearch" type="search" placeholder="Tìm món…" value="${escM(query)}"></label>
+      <button class="btn primary" data-m="openAdd">＋ Thêm món mới</button>
+    </div>
+    <div class="chips">${FILTERS.map(([id, label]) => counts[id] || id === 'all' ? `
+      <button class="chip ${filter === id ? 'on' : ''}" data-m="filter" data-id="${id}">${label} <b>${counts[id]}</b></button>` : '').join('')}
+    </div>
+    <div class="legend">Bấm công tắc để báo <b>còn / hết hàng</b> · 📣 hiện trên bảng tin · ✨ gắn nhãn MỚI · 👁 ẩn khỏi menu · ô <b>Giảm</b> để nhập giá giảm</div>
+    <div id="mmItems">${itemsListHTML(s.list)}</div>`;
+  }
+
+  function itemsListHTML(list) {
+    const shown = list.filter(match);
+    if (!shown.length) return `<div class="mm-empty">Không có món nào khớp. <button class="linkbtn" data-m="filter" data-id="all">Xem tất cả</button></div>`;
+    return CATS.map(c => {
+      const items = shown.filter(d => d.cat === c.id);
+      if (!items.length) return '';
+      const all = list.filter(d => d.cat === c.id);
+      const open = !collapsed.has(c.id) || query || filter !== 'all';
+      return `
+      <section class="cat ${open ? '' : 'closed'}">
+        <button class="cat-h" data-m="fold" data-id="${c.id}">
+          <span class="caret">▾</span><b>${c.name}</b>
+          <small>${all.filter(d => !d.hidden && !d.outReason).length}/${all.length} đang bán</small>
+        </button>
+        ${open ? `<div class="cat-b">${items.map(rowHTML).join('')}</div>` : ''}
+      </section>`;
+    }).join('');
+  }
+
+  function rowHTML(d) {
+    const onSale = d.sale && d.sale < d.price;
+    const state = d.hidden ? 'hidden' : d.outReason ? 'out' : 'ok';
+    const base = d.custom && d.base && d.base !== 'plain' ? MenuAdmin.BASE.find(b => b.id === d.base) : null;
+    return `
+    <div class="item ${state}">
+      <div class="it-name">
+        <span class="dot ${state}" title="${state === 'ok' ? 'Đang bán' : state === 'out' ? d.outReason : 'Đang ẩn'}"></span>
+        <div>
+          <b>${escM(d.name)}</b>
+          <div class="it-tags">
+            ${d.featured ? '<em class="t feat">📣 Bảng tin</em>' : ''}
+            ${d.isNew ? '<em class="t new">MỚI</em>' : ''}
+            ${onSale ? `<em class="t sale">−${d.price - d.sale}K</em>` : ''}
+            ${d.custom ? '<em class="t custom">Tự thêm</em>' : ''}
+            ${base ? `<em class="t game">🎮 pha như ${escM(base.name)}</em>` : ''}
+            ${d.outReason && !d.soldOutManual ? `<em class="t warn">⚠ ${escM(d.outReason)}</em>` : ''}
+          </div>
+        </div>
+      </div>
+      <div class="it-price">
+        <label>Giá<input type="number" min="5" max="500" value="${d.price}" data-m="price" data-id="${d.id}" aria-label="Giá ${escM(d.name)}"><span>K</span></label>
+        <label class="sale ${onSale ? 'has' : ''}">Giảm<input type="number" min="1" max="500" value="${onSale ? d.sale : ''}" placeholder="—" data-m="sale" data-id="${d.id}" aria-label="Giá giảm ${escM(d.name)}"><span>K</span></label>
+      </div>
+      <div class="it-act">
+        ${sw(!d.soldOutManual, 'sold', d.id, d.soldOutManual ? 'Hết hàng' : 'Còn hàng')}
+        <span class="ics">
+          ${ic(d.featured, 'feat', d.id, '📣', d.featured ? 'Gỡ khỏi bảng tin' : 'Đưa lên bảng tin')}
+          ${ic(d.isNew, 'new', d.id, '✨', d.isNew ? 'Bỏ nhãn MỚI' : 'Gắn nhãn MỚI')}
+          ${ic(d.hidden, 'hide', d.id, d.hidden ? '🙈' : '👁', d.hidden ? 'Hiện lại trên menu' : 'Ẩn khỏi menu')}
+          ${d.custom ? ic(false, 'del', d.id, '🗑', 'Xóa món') : ''}
+        </span>
+      </div>
+    </div>`;
+  }
+
+  function refreshItems() {
+    const box = document.getElementById('mmItems');
+    if (box) box.innerHTML = itemsListHTML(MenuAdmin.adminList());
+  }
+
+  // ===================== HOA QUẢ =====================
+  function fruitsHTML() {
+    const fruits = MenuAdmin.allFruits(), st = MenuAdmin.load();
+    const uses = k => {
+      const drinks = MenuAdmin.BASE.filter(d => d.steps.some(s => s.type === 'fruit' && !s.free && s.fruits.includes(k))).length;
+      const box = typeof CUT_FRUIT !== 'undefined' && CUT_FRUIT[k];
+      return [drinks ? `${drinks} món nước ép` : '', box ? 'hộp quả' : ''].filter(Boolean).join(' · ') || 'mix tự chọn';
+    };
+    const outN = Object.keys(st.fruitOut).length;
+    return `
+    <div class="toolbar">
+      <p class="lead">Bấm vào loại quả <b>đã hết hôm nay</b>. Các món dùng loại đó sẽ tự báo hết, khách cũng không chọn được khi tự mix hay cắt quả.</p>
+      ${outN ? '<button class="btn ghost dark" data-m="fruitsAll">Còn đủ tất cả</button>' : ''}
+    </div>
+    <div class="fruit-grid">${Object.entries(fruits).map(([k, f]) => {
+      const out = !!st.fruitOut[k];
+      return `
+      <button class="fcard ${out ? 'out' : ''}" data-m="fruit" data-id="${k}" aria-pressed="${out}">
+        <span class="fi-big">${fruitIcon(f, 36)}</span>
+        <b>${f.name}</b>
+        <small>${uses(k)}</small>
+        <em>${out ? '⛔ Hết hôm nay' : '✅ Còn'}</em>
+      </button>`;
+    }).join('')}</div>`;
+  }
+
+  // ===================== KHUYẾN MÃI =====================
+  const PTYPE = { discount: ['🏷️', 'Giảm giá'], combo: ['🔥', 'Combo'], info: ['📣', 'Thông báo'] };
+  function promosHTML() {
+    const list = Promo.load();
+    return `
+    <div class="toolbar">
+      <p class="lead">Khuyến mãi đang bật hiện ở <b>quầy thông tin</b> trong quán ảo và tự trừ tiền trong giỏ hàng.</p>
+      <button class="btn primary" data-m="openPromo">＋ Tạo khuyến mãi</button>
+    </div>
+    ${list.length ? `<div class="promo-grid">${list.map(p => `
+      <div class="pcard ${p.active ? '' : 'off'} ${p.type}">
+        <div class="pc-top">
+          <span class="pc-emoji">${p.emoji || PTYPE[p.type][0]}</span>
+          <span class="pc-type">${PTYPE[p.type].join(' ')}${p.sample ? ' · mẫu' : ''}</span>
+          ${sw(p.active, 'pToggle', p.id, p.active ? 'Đang bật' : 'Đang tắt')}
+        </div>
+        <b class="pc-title">${escM(p.title)}</b>
+        <p class="pc-desc">${escM(Promo.describe(p))}</p>
+        <div class="pc-foot"><span>${p.type === 'info' ? '' : '🕒 ' + Promo.status(p)}</span>${ic(false, 'pDel', p.id, '🗑', 'Xóa khuyến mãi')}</div>
+      </div>`).join('')}</div>`
+      : `<div class="mm-empty">Chưa có khuyến mãi nào.<br><button class="btn ghost dark" data-m="pSamples" style="margin-top:10px">Thêm khuyến mãi mẫu để xem thử</button></div>`}`;
+  }
+
+  // ===================== ĐIỂM SỐ =====================
+  function pointsHTML() {
+    const c = POINT_CFG, custom = !!MenuAdmin.load().points;
+    return `
+    <div class="pts-wrap">
+      <form id="pointsForm" class="pts-form" autocomplete="off">
+        <fieldset>
+          <legend>Điểm tối đa của mỗi món</legend>
+          <label class="inline"><span>Mỗi 1.000đ được</span><input name="perK" type="number" min="1" max="1000" value="${c.perK}"><span>điểm</span></label>
+          <label class="inline"><span>Tính theo</span><select name="basis"><option value="base" ${c.basis === 'base' ? 'selected' : ''}>giá gốc</option><option value="sale" ${c.basis === 'sale' ? 'selected' : ''}>giá bán sau giảm</option></select></label>
+        </fieldset>
+        <fieldset>
+          <legend>Khách tự pha / tự cắt (chế độ Thử thách)</legend>
+          <div class="split">
+            <label><span>Độ chuẩn</span><input name="base" type="number" min="0" max="100" value="${pct(c.base)}"><i>%</i></label>
+            <label><span>Thưởng hoàn hảo</span><input name="perfect" type="number" min="0" max="100" value="${pct(c.perfect)}"><i>%</i></label>
+            <label><span>Thưởng tốc độ</span><input name="speed" type="number" min="0" max="100" value="${pct(c.speed)}"><i>%</i></label>
+          </div>
+          <p class="sumline" id="splitSum"></p>
+          <label class="inline"><span>Điểm sàn (pha kém vẫn được ít nhất)</span><input name="floor" type="number" min="0" max="100" value="${pct(c.floor)}"><span>% điểm tối đa</span></label>
+        </fieldset>
+        <fieldset>
+          <legend>Khách không chơi game</legend>
+          <label class="inline"><span>Đặt nhanh, Như mọi khi, deal, tự do sáng tạo được</span><input name="quick" type="number" min="0" max="100" value="${pct(c.quick)}"><span>% điểm tối đa</span></label>
+        </fieldset>
+        <p class="hint" id="floorHint"></p>
+        <div class="pts-actions">
+          <button class="btn primary" type="submit">Lưu cấu hình điểm</button>
+          ${custom ? '<button class="btn ghost dark" type="button" data-m="ptReset">Về mặc định</button>' : ''}
+          <span class="muted">${custom ? 'Đang dùng cấu hình riêng' : 'Đang dùng mặc định'} · áp dụng cho các ly đặt từ lúc lưu</span>
+        </div>
+      </form>
+      <aside class="pts-preview">
+        <h4>Xem trước <small>tự tính theo số đang nhập</small></h4>
+        <div id="ptsPreview"></div>
+      </aside>
+    </div>`;
+  }
+
+  function formCfg() {
+    const f = document.getElementById('pointsForm');
+    if (!f) return null;
+    const n = k => Math.round(+f.elements[k].value || 0);
+    return { perK: n('perK'), basis: f.elements.basis.value, base: n('base') / 100, perfect: n('perfect') / 100, speed: n('speed') / 100, quick: n('quick') / 100, floor: n('floor') / 100 };
+  }
+  function updatePreview() {
+    const c = formCfg();
+    if (!c) return;
+    const sum = Math.round((c.base + c.perfect + c.speed) * 100);
+    const el = document.getElementById('splitSum');
+    el.textContent = sum === 100 ? '✓ Tổng 100%' : `Tổng đang là ${sum}% — cần đúng 100%`;
+    el.className = 'sumline ' + (sum === 100 ? 'ok' : 'bad');
+    document.getElementById('floorHint').innerHTML = c.floor < c.quick
+      ? `⚠️ Điểm sàn (${pct(c.floor)}%) đang <b>thấp hơn</b> mức không chơi game (${pct(c.quick)}%): khách pha kém có thể ít điểm hơn người không chơi.`
+      : '✓ Khách tự pha luôn được ít nhất bằng người không chơi game.';
+    document.getElementById('floorHint').className = 'hint ' + (c.floor < c.quick ? 'bad' : 'ok');
+    const price = d => (c.basis === 'sale' ? Promo.unitPrice(d).price : d.price);
+    const ex = ['nau', 'xiumuoi', 'mix', 'chaiden', 'hoplon'].map(id => MENU.find(d => d.id === id)).filter(Boolean);
+    document.getElementById('ptsPreview').innerHTML = `
+      <table>
+        <thead><tr><th>Món</th><th>Tự pha<br>tối đa</th><th>Tự pha<br>tối thiểu</th><th>Không<br>chơi</th></tr></thead>
+        <tbody>${ex.map(d => {
+          const max = Math.round(price(d) * c.perK), game = d.steps.length || d.box;
+          return `<tr><td>${escM(d.name)}<small>${price(d)}K</small></td><td>${game ? num(max) : '—'}</td><td>${game ? num(max * c.floor) : '—'}</td><td>${num(max * c.quick)}</td></tr>`;
+        }).join('')}</tbody>
+      </table>`;
+  }
+
+  // ===================== CỬA SỔ (thêm món / khuyến mãi) =====================
+  function itemOptions(withCats) {
+    const items = MenuAdmin.adminList().filter(d => !d.hidden);
+    return (withCats ? `<optgroup label="Cả nhóm">${CATS.map(c => `<option value="cat:${c.id}">Cả nhóm ${c.name}</option>`).join('')}</optgroup>` : '')
+      + CATS.map(c => `<optgroup label="${c.name}">${items.filter(d => d.cat === c.id).map(d => `<option value="${d.id}">${escM(d.name)} (${d.price}K)</option>`).join('')}</optgroup>`).join('');
+  }
+
+  function modalHTML() {
+    const templates = MenuAdmin.BASE.filter(d => d.steps.length && !d.box);
+    const body = modal === 'add' ? `
+      <h3>＋ Thêm món mới</h3>
+      <form id="addForm" class="mform" autocomplete="off">
+        <label class="w"><span>Tên món</span><input name="name" required maxlength="40" placeholder="VD: Bạc xỉu dừa"></label>
+        <label><span>Nhóm</span><select name="cat">${CATS.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}</select></label>
+        <label><span>Giá (K)</span><input name="price" type="number" min="5" max="500" required placeholder="25"></label>
+        <label class="w"><span>Khách đặt món này thế nào?</span>
+          <select name="base">
+            <option value="">Đặt nhanh, khách chọn đường & đá</option>
+            <option value="plain">Đặt nhanh, không tùy chọn (đồ chai, đồ ăn…)</option>
+            <optgroup label="Có game pha chế, cách pha giống món:">${templates.map(d => `<option value="${d.id}">🎮 ${d.name}</option>`).join('')}</optgroup>
+          </select>
+        </label>
+        <label class="w"><span>Anh Hải giới thiệu (không bắt buộc)</span><input name="intro" maxlength="120" placeholder="VD: Món mới tuần này, béo thơm vị dừa!"></label>
+        <label class="w check"><input type="checkbox" name="isNew" checked> Gắn nhãn <b class="newb">MỚI</b> và để anh Hải mời khách thử</label>
+        <label class="w check"><input type="checkbox" name="featured"> Đưa lên 📣 bảng tin</label>
+        <div class="w mactions"><button class="btn ghost dark" type="button" data-m="close">Hủy</button><button class="btn primary" type="submit">Thêm vào menu</button></div>
+      </form>`
+      : `
+      <h3>＋ Tạo khuyến mãi</h3>
+      <div class="seg3">${Object.entries(PTYPE).map(([k, [e, n]]) => `<button class="${promoType === k ? 'on' : ''}" data-m="pType" data-id="${k}">${e} ${n}</button>`).join('')}</div>
+      <p class="hint">${promoType === 'discount' ? 'Giảm giá một món hoặc cả nhóm, có thể giới hạn khung giờ (giờ vàng).' : promoType === 'combo' ? 'Khách mua đủ bộ món thì tính giá combo. Giá combo phải rẻ hơn giá thường.' : 'Chỉ hiện thông báo ở quầy thông tin, không trừ tiền.'}</p>
+      <form id="promoForm" class="mform" autocomplete="off">
+        <label class="w"><span>Tiêu đề</span><input name="title" required maxlength="40" placeholder="${promoType === 'combo' ? 'VD: Combo sáng tỉnh táo' : promoType === 'info' ? 'VD: Nghỉ Tết từ 28/1' : 'VD: Giờ vàng cà phê'}"></label>
+        ${promoType === 'discount' ? `
+          <label class="w"><span>Áp dụng cho</span><select name="target">${itemOptions(true)}</select></label>
+          <label><span>Mức giảm</span><input name="value" type="number" min="1" max="100" required placeholder="5"></label>
+          <label><span>Đơn vị</span><select name="mode"><option value="k">nghìn đồng (K)</option><option value="pct">phần trăm (%)</option></select></label>
+          <label><span>Từ giờ <i>(tùy chọn)</i></span><input name="from" type="time"></label>
+          <label><span>Đến giờ</span><input name="to" type="time"></label>` : ''}
+        ${promoType === 'combo' ? [0, 1, 2].map(i => `
+          <label class="w2"><span>Món ${i + 1}${i ? ' <i>(tùy chọn)</i>' : ''}</span><select name="item${i}">${i ? '<option value="">—</option>' : ''}${itemOptions(false)}</select></label>
+          <label class="qty"><span>SL</span><input name="qty${i}" type="number" min="1" max="5" value="1"></label>`).join('') + `
+          <label><span>Giá combo (K)</span><input name="price" type="number" min="5" max="1000" required placeholder="45"></label>
+          <label><span>Khung giờ <i>(tùy chọn)</i></span><span class="row2"><input name="from" type="time"><input name="to" type="time"></span></label>` : ''}
+        ${promoType === 'info' ? `<label class="w"><span>Nội dung</span><input name="desc" required maxlength="120" placeholder="VD: Quán nghỉ Tết từ 28/1 đến hết mùng 4"></label>` : ''}
+        <label><span>Biểu tượng</span><select name="emoji">${['🎁', '🔥', '⏰', '🍹', '☕', '🍉', '👯', '📣', '🎉', '💝'].map(e => `<option>${e}</option>`).join('')}</select></label>
+        <div class="w mactions"><button class="btn ghost dark" type="button" data-m="close">Hủy</button><button class="btn primary" type="submit">Tạo ${PTYPE[promoType][1].toLowerCase()}</button></div>
+      </form>`;
+    return `<div class="modal-ov" data-m="closeBg"><div class="modal" role="dialog" aria-modal="true">${body}</div></div>`;
+  }
+
+  // ===================== thao tác =====================
+  $m.addEventListener('click', e => {
+    const b = e.target.closest('[data-m]');
+    if (!b || b.tagName === 'INPUT') return;
+    const act = b.dataset.m, id = b.dataset.id;
+    const d = id ? MenuAdmin.adminList().find(x => x.id === id) : null;
+    switch (act) {
+      case 'sub': sub = id; modal = null; ss.set('cafehai.qsub', sub); render(); return;
+      case 'filter': filter = id; render(); return;
+      case 'fold': collapsed.has(id) ? collapsed.delete(id) : collapsed.add(id); refreshItems(); return;
+      case 'openAdd': modal = 'add'; render(); return;
+      case 'openPromo': modal = 'promo'; render(); return;
+      case 'close': modal = null; render(); return;
+      case 'closeBg': if (e.target === b) { modal = null; render(); } return;
+      case 'pType': promoType = id; render(); return;
+      case 'sold': MenuAdmin.setSoldOut(id, !d.soldOutManual); toast(`${d.name}: ${d.soldOutManual ? 'có hàng lại' : 'đã báo hết'}`); return;
+      case 'feat': MenuAdmin.setFeatured(id, !d.featured); toast(`${d.name}: ${d.featured ? 'gỡ khỏi bảng tin' : 'đã lên bảng tin'}`); return;
+      case 'new': MenuAdmin.setNew(id, !d.isNew); return;
+      case 'hide': MenuAdmin.setHidden(id, !d.hidden); toast(`${d.name}: ${d.hidden ? 'hiện lại trên menu' : 'đã ẩn khỏi menu'}`); return;
+      case 'del': if (confirm(`Xóa món "${d.name}" khỏi menu?`)) { MenuAdmin.removeItem(id); toast('Đã xóa món'); } return;
+      case 'fruit': MenuAdmin.setFruitOut(id, !MenuAdmin.load().fruitOut[id]); return;
+      case 'fruitsAll': MenuAdmin.update(s => { s.fruitOut = {}; }); toast('Đã đánh dấu còn đủ tất cả loại quả'); return;
+      case 'newDay': if (confirm('Mở ca mới: bỏ tất cả đánh dấu "hết hàng" và "hết quả"?')) { MenuAdmin.resetDay(); toast('Đã mở ca mới, tất cả món đang bán'); } return;
+      case 'pToggle': Promo.toggle(id); return;
+      case 'pDel': if (confirm('Xóa khuyến mãi này?')) Promo.remove(id); return;
+      case 'pSamples': Promo.addSamples(); toast('Đã thêm khuyến mãi mẫu'); return;
+      case 'ptReset': if (confirm('Khôi phục cấu hình điểm mặc định?')) { MenuAdmin.resetPoints(); toast('Đã về cấu hình điểm mặc định'); } return;
+    }
+  });
+
+  $m.addEventListener('input', e => {
+    if (e.target.id === 'mmSearch') { query = e.target.value; refreshItems(); }
+    if (e.target.closest('#pointsForm')) updatePreview();
+  });
+
+  $m.addEventListener('change', e => {
+    const t = e.target, id = t.dataset.id;
+    if (t.dataset.m === 'sale') {
+      const d = MenuAdmin.adminList().find(x => x.id === id), v = String(t.value).trim();
+      if (!v) { MenuAdmin.setSale(id, null); toast(`${d.name}: bỏ giá giảm`); return; }
+      const k = Math.round(+v);
+      if (!(k >= 1 && k < d.price)) { toast(`Giá giảm phải thấp hơn giá bán (${d.price}K)`); refreshItems(); return; }
+      MenuAdmin.setSale(id, k); toast(`${d.name}: giảm còn ${k}K`);
+    }
+    if (t.dataset.m === 'price') {
+      const p = Math.round(+t.value);
+      if (!(p >= 5 && p <= 500)) { toast('Giá từ 5K đến 500K'); refreshItems(); return; }
+      const cur = MenuAdmin.adminList().find(x => x.id === id);
+      if (cur && cur.sale && cur.sale >= p) MenuAdmin.setSale(id, null);
+      MenuAdmin.setPrice(id, p); toast(`${cur.name}: giá ${p}K`);
+    }
+  });
+
+  $m.addEventListener('keydown', e => { if (e.key === 'Escape' && modal) { modal = null; render(); } });
+
+  $m.addEventListener('submit', e => {
+    e.preventDefault();
+    const form = e.target, f = new FormData(form);
+    if (form.id === 'addForm') {
+      const name = String(f.get('name') || '').trim(), price = Math.round(+f.get('price'));
+      if (!name) { toast('Nhập tên món'); return; }
+      if (!(price >= 5 && price <= 500)) { toast('Giá từ 5K đến 500K'); return; }
+      if (MenuAdmin.adminList().some(d => d.name.toLowerCase() === name.toLowerCase())) { toast('Đã có món trùng tên'); return; }
+      modal = null;
+      MenuAdmin.addItem({ name, price, cat: f.get('cat'), base: f.get('base') || '', intro: String(f.get('intro') || '').trim(), isNew: !!f.get('isNew') });
+      if (f.get('featured')) { const added = MenuAdmin.load().custom.slice(-1)[0]; if (added) MenuAdmin.setFeatured(added.id, true); }
+      filter = 'all'; query = '';
+      toast(`Đã thêm "${name}" vào menu`);
+    } else if (form.id === 'promoForm') submitPromo(f);
+    else if (form.id === 'pointsForm') submitPoints();
+  });
+
+  function submitPromo(f) {
+    const title = String(f.get('title') || '').trim(), from = f.get('from') || '', to = f.get('to') || '';
+    if (!title) { toast('Nhập tiêu đề'); return; }
+    if ((from && !to) || (!from && to)) { toast('Nhập đủ cả giờ bắt đầu và kết thúc'); return; }
+    const base = { type: promoType, title, emoji: f.get('emoji'), from, to };
+    let p;
+    if (promoType === 'discount') {
+      const t = f.get('target'), value = Math.round(+f.get('value')), mode = f.get('mode');
+      if (!(value > 0) || (mode === 'pct' && value > 90)) { toast('Mức giảm không hợp lệ (tối đa 90%)'); return; }
+      p = { ...base, mode, value, ...(t.startsWith('cat:') ? { cat: t.slice(4) } : { items: [t] }) };
+    } else if (promoType === 'combo') {
+      const merged = [];
+      [0, 1, 2].map(i => ({ id: f.get('item' + i), qty: Math.max(1, Math.round(+f.get('qty' + i) || 1)) })).filter(x => x.id)
+        .forEach(x => { const m = merged.find(y => y.id === x.id); m ? (m.qty += x.qty) : merged.push({ ...x }); });
+      const price = Math.round(+f.get('price'));
+      const normal = merged.reduce((a, x) => a + (MenuAdmin.adminList().find(d => d.id === x.id)?.price || 0) * x.qty, 0);
+      if (merged.reduce((a, x) => a + x.qty, 0) < 2) { toast('Combo cần ít nhất 2 phần'); return; }
+      if (!(price > 0) || price >= normal) { toast(`Giá combo phải rẻ hơn giá thường (${normal}K)`); return; }
+      p = { ...base, items: merged, price };
+    } else {
+      const desc = String(f.get('desc') || '').trim();
+      if (!desc) { toast('Nhập nội dung thông báo'); return; }
+      p = { ...base, desc, from: '', to: '' };
+    }
+    modal = null;
+    Promo.add(p);
+    toast(`Đã tạo "${title}"`);
+  }
+
+  function submitPoints() {
+    const c = formCfg();
+    if (!(c.perK >= 1 && c.perK <= 1000)) { toast('Mỗi 1.000đ: từ 1 đến 1000 điểm'); return; }
+    if (Math.round((c.base + c.perfect + c.speed) * 100) !== 100) { toast('Chia điểm phải cộng lại đúng 100%'); return; }
+    if ([c.base, c.perfect, c.speed, c.quick, c.floor].some(x => !(x >= 0 && x <= 1))) { toast('Các tỷ lệ phải từ 0 đến 100%'); return; }
+    MenuAdmin.setPoints(c);
+    toast('Đã lưu cấu hình điểm');
+  }
+
+  // cập nhật khi dữ liệu đổi (kể cả từ tab khác), giữ chỗ đang gõ
+  const live = () => {
+    if ($m.classList.contains('hidden')) return;
+    const a = document.activeElement;
+    if (a && $m.contains(a) && (a.id === 'mmSearch' || a.closest('#pointsForm') || a.closest('.modal'))) {
+      if (sub === 'items') refreshItems();
+      return;
+    }
+    render();
+  };
+  MenuAdmin.onChange(live);
+  Promo.onChange(live);
+
+  if (ss.get('cafehai.qtab', 'orders') === 'menu') document.querySelector('.qtabs [data-tab="menu"]').click();
+})();

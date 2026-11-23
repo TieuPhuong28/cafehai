@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cafe Hải – Màn hình quầy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/quay-menu.css">
+  <style>
+    body { background: #efe4cd; }
+    .q-top {
+      display: flex; align-items: center; gap: 12px; padding: 12px 20px; background: var(--brown); color: #fff;
+      position: sticky; top: 0; z-index: 5; flex-wrap: wrap;
+    }
+    .q-top .logo b { color: #fff; }
+    .q-top .logo small { color: #e9d7a8; }
+    .q-top .clock { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
+    .q-top .btn.ghost { color: #fff; border-color: rgba(255,255,255,.3); }
+    .q-top .btn.sound-off { background: var(--gold); color: var(--brown); }
+    .stats { display: flex; gap: 8px; }
+    .stats span { background: rgba(255,255,255,.12); padding: 6px 12px; border-radius: 10px; font-size: 13px; }
+    .stats b { font-size: 16px; }
+    .board { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; padding: 16px 20px; align-items: start; }
+    .col h2 { margin: 0 0 10px; font-size: 15px; text-transform: uppercase; letter-spacing: .5px; color: var(--brown); display: flex; gap: 8px; align-items: center; }
+    .col h2 .n { background: var(--brown); color: #fff; border-radius: 10px; padding: 0 9px; font-size: 13px; }
+    .col.c-moi h2 .n { background: var(--gold); }
+    .col .empty-col { color: var(--muted); font-size: 13px; padding: 20px; text-align: center; border: 2px dashed var(--line); border-radius: 14px; }
+    .ocard { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin-bottom: 12px; box-shadow: var(--shadow); }
+    .ocard.new { animation: flash 1s ease 4; border-color: var(--gold); }
+    @keyframes flash { 50% { box-shadow: 0 0 0 6px rgba(217,154,38,.45); } }
+    .ocard .head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .ocard .code { font-size: 22px; font-weight: 900; color: var(--maroon); }
+    .ocard .ago { font-size: 12px; color: var(--muted); }
+    .ocard .type { font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 9px; }
+    .type.ship { background: #e6eefb; color: #2a5bb3; }
+    .type.pickup { background: var(--green-soft); color: var(--green); }
+    .ocard .cus { font-size: 14px; margin: 6px 0 8px; color: var(--ink); }
+    .ocard .cus small { color: var(--muted); display: block; }
+    .items { border-top: 1px dashed var(--line); padding-top: 6px; }
+    .item { padding: 6px 0; border-bottom: 1px dashed var(--line); }
+    .item:last-child { border-bottom: 0; }
+    .item b { font-size: 15px; color: var(--brown); }
+    .item .recipe { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+    .item .recipe span { font-size: 12px; background: #fbefe2; border: 1px solid #efd9bf; color: var(--brown); padding: 1px 8px; border-radius: 8px; font-weight: 600; }
+    .item .g { font-size: 11px; color: var(--green); font-weight: 700; margin-left: 6px; }
+    .item .nt { font-size: 12px; color: var(--maroon); margin-top: 3px; }
+    .onote { background: #fff6dc; border-radius: 8px; padding: 6px 10px; font-size: 13px; margin-top: 8px; }
+    .ofoot { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; gap: 8px; }
+    .ofoot .total { font-weight: 900; font-size: 17px; color: var(--maroon); }
+    .ofoot .total small { display: block; font-size: 11px; color: var(--muted); font-weight: 600; }
+    .ofoot .acts { display: flex; gap: 6px; }
+    .ofoot .btn { padding: 9px 12px; font-size: 13px; }
+    .btn.danger { background: transparent; color: var(--danger); border: 1px solid #ecc5c0; }
+    details.done { margin: 0 20px 30px; }
+    details.done summary { cursor: pointer; font-weight: 700; color: var(--brown); padding: 8px 0; }
+    .done-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+    .done-list .ocard { opacity: .75; margin: 0; }
+    @media (max-width: 900px) { .board { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="q-top">
+    <div class="logo" style="flex:none">
+      <svg viewBox="0 0 40 40"><rect x="2.5" y="2.5" width="35" height="35" fill="none" stroke="#fff" stroke-width="3"/><path d="M12 8v24M28 8v24M12 20h16" stroke="#fff" stroke-width="6" fill="none"/></svg>
+      <div><b>CAFE HẢI</b><small>Màn hình quầy</small></div>
+    </div>
+    <div class="qtabs"><button class="on" data-tab="orders">📋 Đơn hàng</button><button data-tab="menu">🍽️ Quản lý menu</button></div>
+    <div class="stats" id="stats"></div>
+    <div style="flex:1"></div>
+    <div class="clock" id="clock"></div>
+    <button class="btn sound-off" id="soundBtn">🔔 Bật chuông báo đơn</button>
+    <button class="btn ghost" id="clearBtn">Xóa dữ liệu demo</button>
+  </div>
+  <div id="ordersView">
+    <div class="board" id="board"></div>
+    <details class="done" id="doneWrap"><summary id="doneSum"></summary><div class="done-list" id="doneList"></div></details>
+  </div>
+  <div id="menuView" class="hidden"></div>
+  <div class="toast" id="toast"></div>
+
+  <script src="js/menu.js"></script>
+  <script src="js/menuadmin.js"></script>
+  <script src="js/promo.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/quay.js"></script>
+  <script src="js/quay-menu.js"></script>
+</body>
+</html>

@@ -1,0 +1,109 @@
+/* ===== Mặt tiền quán thật: 41 Chu Văn An ===== */
+.storefront { background: #e9e2d6; }
+.storefront .upper {
+  position: absolute; left: 0; right: 0; top: 0; height: 15%;
+  background: linear-gradient(#f1ece3, #ddd5c7);
+}
+.storefront .rail {
+  position: absolute; left: 6%; right: 6%; bottom: 10%; height: 55%;
+  border-top: 4px solid #3b3b3b; border-bottom: 3px solid #3b3b3b;
+  background: repeating-linear-gradient(90deg, #3b3b3b 0 2px, transparent 2px 16px);
+  opacity: .8;
+}
+.storefront .ac { position: absolute; bottom: 18%; left: 18%; width: 54px; height: 34px; background: #f5f5f3; border-radius: 4px; box-shadow: inset 0 0 0 2px #cfcfcf; }
+.storefront .ac::after { content: ''; position: absolute; left: 6px; top: 6px; width: 22px; height: 22px; border-radius: 50%; border: 3px solid #bdbdbd; }
+.storefront .ac.a2 { left: auto; right: 16%; }
+.storefront .balcony {
+  position: absolute; left: -2%; right: -2%; top: 15%; height: 7%;
+  background: linear-gradient(#b85a40, #9c4430 30%, #7e3424);
+  box-shadow: 0 10px 18px rgba(60, 20, 10, .45); z-index: 2;
+}
+.storefront .wall {
+  position: absolute; left: 0; right: 0; top: 22%; bottom: 22%;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(0,0,0,.25), transparent 55%),
+    linear-gradient(#b4553b, #a94b33);
+}
+.storefront .wall::before { /* bóng ban công */
+  content: ''; position: absolute; inset: 0 0 auto; height: 22%; background: linear-gradient(rgba(60,20,10,.35), transparent);
+}
+
+.sf-win {
+  position: absolute; top: 30%; height: 34%; border: 5px solid #333; border-radius: 3px;
+  background: linear-gradient(135deg, #5a4636, #2f241c 60%, #4a3a2e);
+  box-shadow: inset 0 0 0 2px #555, 0 4px 8px rgba(0,0,0,.25); overflow: hidden;
+}
+.sf-win.left { left: 5%; width: 29%; }
+.sf-win.right { right: 5%; width: 26%; background: linear-gradient(135deg, #6c6a63, #3e3c37); }
+.sf-win .shelf { position: absolute; left: 0; right: 0; height: 3px; background: rgba(255, 220, 160, .35); }
+.sf-win .shelf.s1 { bottom: 26%; } .sf-win .shelf.s2 { bottom: 8%; }
+.h-sign {
+  position: absolute; left: 8%; top: 10%; width: 62%; aspect-ratio: 1; background: #fbfaf6;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,.4);
+}
+.h-sign b { font-size: 34px; line-height: 1; font-weight: 900; color: #1d1d1d; font-family: Arial, sans-serif; }
+.h-sign small { font-size: 7px; font-weight: 800; color: #1d1d1d; letter-spacing: .5px; margin-top: 2px; }
+.poster-vn {
+  position: absolute; left: 14%; top: 10%; width: 72%; height: 70%; background: #d8261c;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,.4);
+}
+.poster-vn b { color: #ffd200; font-size: 30px; line-height: 1; }
+.poster-vn small { color: #fff; font-weight: 900; font-size: 9px; letter-spacing: .5px; }
+
+.storefront .door {
+  position: absolute; left: 38%; width: 23%; top: 24%; bottom: 0; height: auto; flex: none;
+  border: 6px solid #2d2d2d; border-bottom: 0; border-radius: 2px; padding: 0;
+  background: #2d2d2d; transform-origin: left center; transition: transform .7s cubic-bezier(.5, 0, .3, 1);
+  animation: doorglow 1.8s infinite;
+}
+.storefront .door::before { display: none; }
+.inside-glow {
+  position: absolute; inset: 0; background: linear-gradient(#6a4a32, #b9834e 55%, #8a5a36);
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,.18);
+}
+.inside-glow i { position: absolute; left: 14%; right: 14%; height: 3px; background: rgba(40, 20, 10, .55); }
+.inside-glow i:nth-child(1) { top: 22%; } .inside-glow i:nth-child(2) { top: 36%; } .inside-glow i:nth-child(3) { top: 50%; }
+.inside-glow i:nth-child(4) { top: 8%; left: 30%; right: 30%; height: 14px; border-radius: 50%; background: #e3b04b; }
+.storefront .door .open-sign { top: 62%; }
+.storefront .door .knob { right: 6px; top: 55%; width: 6px; height: 22px; border-radius: 3px; background: #c9c9c9; }
+
+.plate {
+  position: absolute; left: 62.5%; top: 17%; background: #1f1f1f; color: #fff; border-radius: 3px; padding: 3px 6px;
+  display: flex; flex-direction: column; align-items: center; line-height: 1; font-size: 9px; box-shadow: 0 2px 4px rgba(0,0,0,.4);
+}
+.plate .flag { display: grid; place-items: center; width: 16px; height: 11px; background: #da251d; color: #ffcd00; font-size: 8px; margin-bottom: 2px; }
+.plate b { font-size: 15px; font-weight: 900; margin: 1px 0; }
+.plate small { font-size: 6.5px; font-weight: 700; letter-spacing: .3px; }
+.hh { position: absolute; right: 1%; top: 47%; font-size: 7px; font-weight: 900; color: #fff; background: #222; padding: 2px 3px; line-height: 1.2; border-radius: 2px; }
+
+.storefront .sidewalk {
+  position: absolute; left: 0; right: 0; bottom: 12%; height: 10%;
+  background: repeating-linear-gradient(90deg, #8d8f8e 0 2px, #a9abaa 2px 60px), #a9abaa;
+  box-shadow: inset 0 6px 8px rgba(0,0,0,.2);
+}
+.sidewalk > span { position: absolute; bottom: 30%; }
+.sidewalk .plant { font-size: 64px; line-height: 1; bottom: 25%; filter: drop-shadow(0 4px 3px rgba(0,0,0,.3)); }
+.sidewalk .p1 { left: 1%; } .sidewalk .p2 { right: 2%; font-size: 78px; }
+.sidewalk .flowers { right: 1%; bottom: 140%; font-size: 18px; letter-spacing: -4px; }
+.chair { width: 34px; height: 46px; }
+.chair::before { content: ''; position: absolute; left: 4px; right: 4px; top: 0; height: 22px; border: 3px solid #1d1d1d; border-bottom: 0; border-radius: 4px 4px 0 0; background: rgba(40,40,40,.85); }
+.chair::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 24px; border-left: 3px solid #1d1d1d; border-right: 3px solid #1d1d1d; border-top: 5px solid #2a2a2a; }
+.sidewalk .c1 { left: 20%; } .sidewalk .c2 { left: 44%; }
+.table { left: 31%; width: 36px; height: 30px; border-top: 6px solid #6b3a22; border-left: 3px solid #4a2615; border-right: 3px solid #4a2615; }
+.table i { position: absolute; top: -26px; font-style: normal; font-size: 16px; }
+.table i:first-child { left: 0; } .table i:last-child { right: 0; }
+.fan { left: 64%; width: 30px; height: 44px; }
+.fan::before { content: ''; position: absolute; top: 0; left: 0; width: 30px; height: 30px; border-radius: 50%; background: radial-gradient(#ddd 30%, #bbb 31%, #eee 60%); border: 2px solid #999; }
+.fan::after { content: ''; position: absolute; bottom: 0; left: 12px; width: 6px; height: 14px; background: #999; box-shadow: -8px 12px 0 -1px #999, 8px 12px 0 -1px #999; }
+.storefront .curb { position: absolute; left: 0; right: 0; bottom: 10%; height: 2%; background: #c9cac8; box-shadow: 0 3px 4px rgba(0,0,0,.25); }
+.storefront .street { height: 10%; background: linear-gradient(#bdb6ac, #a49c90); }
+.storefront .street::before { display: none; }
+.storefront .street span { top: 0; font-size: 28px; }
+.addr-tag {
+  position: absolute; top: 3%; left: 50%; transform: translateX(-50%); z-index: 3; white-space: nowrap;
+  background: #f0c04a; color: #fff; font-weight: 900; font-size: 20px; padding: 4px 16px; border-radius: 8px;
+  text-shadow: 0 1px 2px rgba(0,0,0,.35); box-shadow: 0 4px 10px rgba(0,0,0,.2);
+}
+.storefront .enter-hint { bottom: calc(22% + 8px); z-index: 4; }
+.storefront.leaving { animation: zoomdoor .75s ease-in forwards; transform-origin: 50% 60%; }
+@keyframes zoomdoor { to { transform: scale(3); opacity: 0; } }
