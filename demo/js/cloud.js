@@ -172,22 +172,22 @@ const Cloud = (() => {
 
   // ----- Góc quán -----
   // Khách: theo dõi góc quán của mình (tự tạo góc trống nếu chưa có)
-  let unsubCorner = null, cornerDoc = null, cornerState = 'none';
+  let unsubCorner = null, cornerDoc = null, cornerState = 'none', cornerError = '';
   function watchCorner() {
     if (unsubCorner) { unsubCorner(); unsubCorner = null; }
-    cornerDoc = null; cornerState = 'none';
+    cornerDoc = null; cornerState = 'none'; cornerError = '';
     if (!enabled || !user || !isCustomerEmail(user.email)) { emit('corner', null); return; }
     cornerState = 'loading';
     const ref = db.doc('corners/' + user.uid);
     unsubCorner = ref.onSnapshot(s => {
       if (!s.exists) {
         cornerState = 'creating';
-        ref.set(CornerData.emptyDoc()).catch(e => { cornerState = 'error'; console.warn('corner create', e); emit('corner', null); });
+        ref.set(CornerData.emptyDoc()).catch(e => { cornerState = 'error'; cornerError = 'tạo: ' + (e.code || e.message); console.warn('corner create', e); emit('corner', null); });
         return;
       }
       cornerDoc = s.data(); cornerState = 'ok';
       emit('corner', cornerDoc);
-    }, err => { cornerState = 'error'; console.warn('corner', err); emit('corner', null); });
+    }, err => { cornerState = 'error'; cornerError = 'đọc: ' + (err.code || err.message); console.warn('corner', err); emit('corner', null); });
   }
   // Mua đồ: quy tắc Firestore kiểm tra giá (cornerShop), xu còn lại và điều kiện mở khóa
   function buyCorner(id, price, layout) {
@@ -222,6 +222,7 @@ const Cloud = (() => {
     enabled, on, niceError,
     get corner() { return cornerDoc; },
     get cornerState() { return cornerState; },
+    get cornerError() { return cornerError; },
     watchCorner, buyCorner, saveCornerLayout, syncCornerShop, listCorners,
     get ready() { return ready; },
     get user() { return user; },

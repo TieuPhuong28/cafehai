@@ -144,7 +144,7 @@ const Corner = (() => {
     if (!d) {
       const st = Cloud.cornerState;
       return `${head()}<div class="empty"><div>${st === 'error' ? '⚠️' : '⏳'}</div>${st === 'error'
-        ? 'Chưa mở được góc quán trên bản online.<br><small>Quán cần cập nhật quy tắc Firestore (xem HUONG-DAN-FIREBASE.md).</small>' : 'Đang dọn góc quán cho bạn…'}</div>${orderFab()}`;
+        ? `Chưa mở được góc quán trên bản online.<br><small>Quán cần cập nhật quy tắc Firestore (xem HUONG-DAN-FIREBASE.md).<br>Mã lỗi: ${esc(Cloud.cornerError || '?')}</small><br><br><button class="btn primary" data-act="cn" data-a="retry">↻ Thử lại</button>` : 'Đang dọn góc quán cho bạn…'}</div>${orderFab()}`;
     }
     const p = C.progress(d);
     const intro = !introSeen && !LS.get('cafehai.cornerIntro', false);
@@ -366,6 +366,7 @@ const Corner = (() => {
       case 'store': { const layout = d.layout.filter((x, k) => k !== sel.k); sel = null; write({ ...d, layout }); render(); toast('Đã cất vào kho'); break; }
       case 'cancel': sel = null; render(); break;
       case 'gift': claimGift(+el.dataset.v); break;
+      case 'retry': Cloud.watchCorner(); render(); break;
     }
   }
 
