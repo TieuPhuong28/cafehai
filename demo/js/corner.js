@@ -140,6 +140,7 @@ const Corner = (() => {
         <p class="muted-p">Bản demo lưu góc quán theo số điện thoại bạn dùng khi đặt hàng.</p>
         <label class="field"><span>Số điện thoại</span><input name="phone" inputmode="tel" required placeholder="09xx xxx xxx"></label>
         <button class="btn primary block" type="submit">Mở góc quán</button></form>${orderFab()}`;
+    markSeen();
     const d = doc();
     if (!d) {
       const st = Cloud.cornerState;
@@ -173,6 +174,13 @@ const Corner = (() => {
     ${tab === 'shop' ? shopHTML(d) : tab === 'inv' ? invHTML(d) : giftHTML(d)}
     ${earnHTML(d)}
     ${orderFab()}`;
+  }
+
+  // Ghi lần đầu khách mở góc quán (quầy dùng để đo % khách dùng góc quán)
+  function markSeen() {
+    if (online()) { if (Cloud.uid) Cloud.openCorner(); return; }
+    const raw = C.localAll()[key()];
+    if (!raw || !raw.seenAt) C.localSet(key(), { ...C.normalize(raw), ...(raw || {}), seenAt: Date.now() });
   }
 
   const orderFab = () => `<button class="cn-fab" data-act="go" data-to="scene">☕ Đặt món</button>`;

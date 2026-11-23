@@ -144,6 +144,7 @@ Nếu số liệu ở bước nào không đạt, **dừng lại sửa** chứ k
 - Cấp 1–5 theo tổng "phong cách" của đồ (25 / 55 / 90 / 130). Quà thật ví dụ: cấp 3 tặng Trà Chanh, cấp 5 tặng Nâu; quà vào giỏ giá 0đ, phải đi kèm món trả tiền, quầy kiểm tra cấp khi hoàn tất đơn.
 - Khách ảo ngồi trên ghế (số khách = cấp quán); báo "+N xu! Bạn vừa mở khóa …" khi đơn hoàn tất.
 - Quầy: mục **🏠 Góc quán** trong Quản lý menu (bật/tắt, tỷ lệ xu, thưởng lần đầu, quà cấp 3/5, số liệu khách theo cấp, xu đã phát/tiêu, quà đã giao).
+- **Đo điều kiện sang Giai đoạn 2** ngay ở mục trên: "% khách mở góc quán" (chỉ đếm khách tự mở, không đếm góc tạo tự động khi quầy cộng xu) và "chi phí quà / doanh thu của khách có góc quán" (hiện đỏ khi vượt 7%).
 - **Chưa làm (để giai đoạn sau):** tip khách ảo, ca làm 2 phút, ghé thăm/mời bạn, quán đẹp nhất tuần, sự kiện mùa, mở rộng 5×5 / tầng 2, cấp 6–10, bộ hình vẽ đẹp theo quán thật.
 - Trước khi chạy với khách: dán lại `firestore.rules` lên Firebase (xem `HUONG-DAN-FIREBASE.md`), và anh Hải chốt quà thật ở mốc cấp (mục 11).
 

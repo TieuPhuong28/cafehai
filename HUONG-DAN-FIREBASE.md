@@ -46,7 +46,9 @@ Góc quán cần thêm quy tắc bảo mật mới. Làm **một lần** sau khi
 2. Mở màn hình quầy và đăng nhập nhân viên một lần: app tự đưa bảng giá đồ góc quán lên (collection `cornerShop`).
 3. Vào **Quản lý menu → 🏠 Góc quán** để chỉnh tỷ lệ xu, thưởng lần đầu và quà ở cấp 3, cấp 5 (hoặc tắt tính năng).
 
-Nếu chưa làm bước 1, quầy vẫn hoàn tất đơn bình thường nhưng **chưa cộng xu**, và khách thấy thông báo "Chưa mở được góc quán".
+Nếu chưa làm bước 1, quầy vẫn hoàn tất đơn bình thường nhưng **chưa cộng xu**, và khách thấy thông báo "Chưa mở được góc quán" (bấm **↻ Thử lại** sau khi đã publish).
+
+**Mỗi lần `firestore.rules` trong dự án thay đổi thì dán lại và Publish một lần nữa.** Bản 23/11 (chiều) có thêm trường `seenAt` để đếm khách thật sự mở góc quán.
 
 ## Câu hỏi thường gặp
 - **Khách quên mật khẩu?** Bản hiện tại chưa tự đặt lại được. Quầy vào **Authentication → Users**, tìm `0901234567@khach.cafehai.app`, xóa tài khoản đó; khách tạo lại tài khoản mới (điểm cũ quán cộng bù bằng tay nếu cần). Bản sau có thể thêm đặt lại mật khẩu.

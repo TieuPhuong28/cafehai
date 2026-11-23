@@ -219,3 +219,5 @@
 .onote.member-q { background: #eef2fb; color: #2a4f9a; }
 .onote.member-q.guest { background: #f3eee6; color: var(--muted); }
 .item .g.gift { color: #b06a00; }
+.rw-row b.bad { color: var(--danger); }
+.rw-row > b { text-align: right; }

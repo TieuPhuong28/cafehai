@@ -180,11 +180,7 @@ const Cloud = (() => {
     cornerState = 'loading';
     const ref = db.doc('corners/' + user.uid);
     unsubCorner = ref.onSnapshot(s => {
-      if (!s.exists) {
-        cornerState = 'creating';
-        ref.set(CornerData.emptyDoc()).catch(e => { cornerState = 'error'; cornerError = 'tạo: ' + (e.code || e.message); console.warn('corner create', e); emit('corner', null); });
-        return;
-      }
+      if (!s.exists) { cornerState = 'missing'; emit('corner', null); return; } // tạo khi khách mở góc quán lần đầu
       cornerDoc = s.data(); cornerState = 'ok';
       emit('corner', cornerDoc);
     }, err => { cornerState = 'error'; cornerError = 'đọc: ' + (err.code || err.message); console.warn('corner', err); emit('corner', null); });
@@ -196,6 +192,14 @@ const Cloud = (() => {
     return db.doc('corners/' + user.uid).update(patch);
   }
   const saveCornerLayout = layout => db.doc('corners/' + user.uid).update({ layout });
+  // Khách mở góc quán: tạo góc trống nếu chưa có, ghi lần đầu mở (để quầy đo % khách dùng góc quán)
+  function openCorner() {
+    if (!enabled || !user || !isCustomerEmail(user.email)) return;
+    const ref = db.doc('corners/' + user.uid);
+    const fail = e => { cornerState = 'error'; cornerError = 'tạo: ' + (e.code || e.message); console.warn('corner open', e); emit('corner', null); };
+    if (cornerState === 'missing') { cornerState = 'creating'; ref.set({ ...CornerData.emptyDoc(), seenAt: Date.now() }).catch(fail); }
+    else if (cornerState === 'ok' && cornerDoc && !cornerDoc.seenAt) ref.update({ seenAt: Date.now() }).catch(e => console.warn('corner seen', e));
+  }
 
   // Quầy: đưa bảng giá đồ lên Firestore để quy tắc bảo mật kiểm tra khi khách mua
   async function syncCornerShop() {
@@ -213,9 +217,12 @@ const Cloud = (() => {
       if (n) await batch.commit();
     } catch (e) { console.warn('Góc quán: chưa đồng bộ được bảng giá đồ (kiểm tra firestore.rules)', e); }
   }
+  async function countCustomers() {
+    return (await db.collection('customers').limit(5000).get()).size;
+  }
   async function listCorners() {
     const s = await db.collection('corners').limit(1000).get();
-    return s.docs.map(d => d.data());
+    return s.docs.map(d => ({ ...d.data(), id: d.id }));
   }
 
   return {
@@ -223,7 +230,7 @@ const Cloud = (() => {
     get corner() { return cornerDoc; },
     get cornerState() { return cornerState; },
     get cornerError() { return cornerError; },
-    watchCorner, buyCorner, saveCornerLayout, syncCornerShop, listCorners,
+    watchCorner, openCorner, buyCorner, saveCornerLayout, syncCornerShop, listCorners, countCustomers,
     get ready() { return ready; },
     get user() { return user; },
     get uid() { return user && isCustomerEmail(user.email) ? user.uid : null; },

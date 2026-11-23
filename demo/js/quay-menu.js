@@ -305,11 +305,12 @@
       <section class="pts-form rewards-box">
         <h4>📊 Số liệu <small>${Store.online() ? 'bản online' : 'bản demo trên máy này'}</small></h4>
         ${st ? `
-          <div class="rw-row"><span>Khách đã mở góc quán</span><b>${num(st.n)}</b></div>
+          <div class="rw-row"><span>Khách đã mở góc quán<small>Mục tiêu giai đoạn 1: ≥ 30% khách dùng app</small></span><b>${num(st.opened)} / ${num(st.customers)} khách · ${pctOf(st.opened, st.customers)}</b></div>
           <div class="rw-row"><span>Khách đã có xu (có đơn hoàn tất)</span><b>${num(st.active)}</b></div>
           <div class="rw-row"><span>Xu đã phát / đã tiêu</span><b>${num(st.xu)} / ${num(st.spent)}</b></div>
           <div class="rw-row"><span>Khách theo cấp</span><b>${st.levels.map((n, k) => `C${k + 1}: ${n}`).join(' · ')}</b></div>
-          <div class="rw-row"><span>Quà mốc cấp đã giao</span><b>${num(st.gifts)} phần · ~${num(st.giftCost)}K</b></div>`
+          <div class="rw-row"><span>Quà mốc cấp đã giao</span><b>${num(st.gifts)} phần · ~${num(st.giftCost)}K</b></div>
+          <div class="rw-row"><span>Chi phí quà / doanh thu của khách có góc quán<small>Mục tiêu: ≤ 5–7% · doanh thu tính trên ${num(st.orders)} đơn hoàn tất gần đây</small></span><b class="${st.revenue && st.giftCost / st.revenue > .07 ? 'bad' : ''}">${num(st.giftCost)}K / ${num(st.revenue)}K · ${pctOf(st.giftCost, st.revenue)}</b></div>`
           : '<p class="hint">Bấm "Tải số liệu" để xem.</p>'}
         <div class="pts-actions"><button class="btn light" type="button" data-m="cnStats" ${cnLoading ? 'disabled' : ''}>${cnLoading ? 'Đang tải…' : '↻ Tải số liệu'}</button></div>
       </section>
@@ -323,12 +324,21 @@
       </aside>
     </div>`;
   }
+  const pctOf = (a, b) => (b ? (Math.round(a / b * 1000) / 10).toLocaleString('vi-VN') + '%' : '—');
   async function loadCornerStats() {
     const C = CornerData;
     cnLoading = true; render();
     try {
-      const docs = Store.online() ? await Cloud.listCorners() : Object.values(C.localAll());
-      const st = { n: docs.length, active: 0, xu: 0, spent: 0, levels: C.LEVELS.map(() => 0), gifts: 0, giftCost: 0 };
+      const online = Store.online();
+      // bản online: khóa = uid; bản demo: khóa = số điện thoại
+      const docs = online ? await Cloud.listCorners() : Object.entries(C.localAll()).map(([id, d]) => ({ ...d, id }));
+      const done = Store.all().filter(o => o.status === 'xong');
+      const keyOf = o => (online ? o.uid : C.phoneKey(o.customer && o.customer.phone));
+      const customers = online ? await Cloud.countCustomers() : new Set(Store.all().map(keyOf).filter(Boolean)).size;
+      const opened = new Set(docs.filter(d => d.seenAt).map(d => d.id));
+      const mine = done.filter(o => opened.has(keyOf(o)));
+      const st = { n: docs.length, opened: opened.size, customers, active: 0, xu: 0, spent: 0, levels: C.LEVELS.map(() => 0), gifts: 0, giftCost: 0,
+        orders: mine.length, revenue: mine.reduce((a, o) => a + (o.total || 0), 0) };
       docs.map(C.normalize).forEach(d => {
         if (d.xu) st.active++;
         st.xu += d.xu || 0; st.spent += d.spent || 0;
