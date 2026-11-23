@@ -12,6 +12,8 @@ node demo/server.js
 Mở hai trang ở hai tab của **cùng một trình duyệt**. Đơn khách đặt hiện ngay ở quầy; quầy đổi trạng thái thì trang khách cập nhật theo.
 Bấm "Bật chuông báo đơn" ở quầy để nghe tiếng báo khi có đơn mới.
 
+Đã có cấu hình Firebase thì app chạy bản online. Thêm `?demo` vào cuối địa chỉ (vd: `http://localhost:5173/?demo` và `/quay.html?demo`) để chạy thử chế độ demo trên máy.
+
 > Bản demo lưu dữ liệu trong trình duyệt (localStorage), chưa có server thật. Điện thoại khác **không** đồng bộ với máy tính.
 
 ## Cấu trúc
@@ -35,4 +37,6 @@ Bấm "Bật chuông báo đơn" ở quầy để nghe tiếng báo khi có đơ
 | `js/account.js` | Tài khoản khách: đăng nhập SĐT + mật khẩu, điểm, đổi quà |
 | `js/quay-cloud.js` | Đăng nhập nhân viên cho màn hình quầy (bản online) |
 | `js/store.js` | Lưu đơn + đồng bộ giữa các tab |
+| `js/corner-data.js` | **Góc quán**: danh sách đồ, giá xu, điểm phong cách, cấp quán, điều kiện mở khóa, cách cộng xu khi hoàn tất đơn |
+| `js/corner.js` | Màn "Góc quán của tôi" của khách: phòng 4×4, cửa hàng đồ, kho, quà cấp |
 | `assets/` | Ảnh quán (menu, đồ uống, hộp quả, chủ quán) |

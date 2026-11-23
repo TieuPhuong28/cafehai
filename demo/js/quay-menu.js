@@ -56,6 +56,7 @@
       ['fruits', '🍊 Hoa quả hôm nay', s.fruitOut ? `${s.fruitOut} hết` : 'đủ'],
       ['promos', '🎁 Khuyến mãi', `${s.promos} bật`],
       ['points', '🏆 Điểm số', POINT_CFG === null ? '' : (MenuAdmin.load().points ? 'tùy chỉnh' : 'mặc định')],
+      ['corner', '🏠 Góc quán', CornerData.cfg().enabled ? 'bật' : 'tắt'],
     ];
     $m.innerHTML = `
     <div class="mm-top">
@@ -71,7 +72,7 @@
     <nav class="subnav">${tabs.map(([id, label, badge]) => `
       <button class="${sub === id ? 'on' : ''}" data-m="sub" data-id="${id}">${label}${badge ? `<small>${badge}</small>` : ''}</button>`).join('')}
     </nav>
-    <div id="mmBody">${sub === 'items' ? itemsHTML(s) : sub === 'fruits' ? fruitsHTML() : sub === 'promos' ? promosHTML() : pointsHTML()}</div>
+    <div id="mmBody">${sub === 'items' ? itemsHTML(s) : sub === 'fruits' ? fruitsHTML() : sub === 'promos' ? promosHTML() : sub === 'corner' ? cornerHTML() : pointsHTML()}</div>
     ${modal ? modalHTML() : ''}`;
     if (sub === 'points') updatePreview();
     if (modal) setTimeout(() => $m.querySelector('.modal input, .modal select')?.focus(), 30);
@@ -273,6 +274,81 @@
     </div>`;
   }
 
+  // ===================== GÓC QUÁN =====================
+  let cnStats = null, cnLoading = false;
+  function cornerHTML() {
+    const C = CornerData, c = C.cfg();
+    const giftSel = L => `<select name="gift${L}"><option value="">(không có quà)</option>${CATS.map(cat => `<optgroup label="${cat.name}">${MenuAdmin.adminList().filter(d => d.cat === cat.id && !d.hidden).map(d => `<option value="${d.id}" ${c.gifts[L] === d.id ? 'selected' : ''}>${escM(d.name)} (${d.price}K)</option>`).join('')}</optgroup>`).join('')}</select>`;
+    const st = cnStats;
+    return `
+    <div class="pts-wrap">
+      <form id="cornerForm" class="pts-form" autocomplete="off">
+        <fieldset>
+          <legend>Bật / tắt</legend>
+          <label class="inline"><input type="checkbox" name="enabled" ${c.enabled ? 'checked' : ''}><span>Bật "Góc quán của tôi" cho khách (cầu thang trong quán, nút 🏠)</span></label>
+        </fieldset>
+        <fieldset>
+          <legend>Xu (chỉ cộng khi quầy bấm hoàn tất đơn)</legend>
+          <label class="inline"><span>Mỗi 1.000đ đơn hàng được</span><input name="rate" type="number" min="0" max="10" step="0.5" value="${c.rate}"><span>xu</span></label>
+          <label class="inline"><span>Lần đầu mua một loại món (cà phê, nước ép, hoa quả, chai, trà & khác)</span><input name="firstBonus" type="number" min="0" max="200" value="${c.firstBonus}"><span>xu</span></label>
+        </fieldset>
+        <fieldset>
+          <legend>Quà thật ở mốc cấp</legend>
+          ${C.GIFT_LEVELS.map(L => `<label class="inline"><span>Cấp ${L} (từ ${C.LEVELS[L - 1]} phong cách)</span>${giftSel(L)}</label>`).join('')}
+          <p class="hint">Khách bấm "Nhận quà" → món được thêm vào đơn với giá 0đ. Khi quầy hoàn tất đơn, hệ thống kiểm tra cấp góc quán và chỉ cho nhận mỗi mốc một lần.</p>
+        </fieldset>
+        <div class="pts-actions">
+          <button class="btn primary" type="submit">Lưu cấu hình Góc quán</button>
+          <span class="muted">Ước lượng: ly 20K = ${C.estimate(20)} xu · khách mua 2 ly/tuần ≈ ${C.estimate(40)} xu/tuần</span>
+        </div>
+      </form>
+      <section class="pts-form rewards-box">
+        <h4>📊 Số liệu <small>${Store.online() ? 'bản online' : 'bản demo trên máy này'}</small></h4>
+        ${st ? `
+          <div class="rw-row"><span>Khách đã mở góc quán</span><b>${num(st.n)}</b></div>
+          <div class="rw-row"><span>Khách đã có xu (có đơn hoàn tất)</span><b>${num(st.active)}</b></div>
+          <div class="rw-row"><span>Xu đã phát / đã tiêu</span><b>${num(st.xu)} / ${num(st.spent)}</b></div>
+          <div class="rw-row"><span>Khách theo cấp</span><b>${st.levels.map((n, k) => `C${k + 1}: ${n}`).join(' · ')}</b></div>
+          <div class="rw-row"><span>Quà mốc cấp đã giao</span><b>${num(st.gifts)} phần · ~${num(st.giftCost)}K</b></div>`
+          : '<p class="hint">Bấm "Tải số liệu" để xem.</p>'}
+        <div class="pts-actions"><button class="btn light" type="button" data-m="cnStats" ${cnLoading ? 'disabled' : ''}>${cnLoading ? 'Đang tải…' : '↻ Tải số liệu'}</button></div>
+      </section>
+      <aside class="pts-preview">
+        <h4>Cấp quán & đồ <small>bản đầu: 4×4 ô, cấp 1–5, ${C.ITEMS.length} món đồ</small></h4>
+        <table>
+          <thead><tr><th>Đồ</th><th>Giá</th><th>Phong<br>cách</th><th>Mở khóa</th></tr></thead>
+          <tbody>${C.ITEMS.map(it => `<tr><td>${escM(it.name)}<small>${C.GROUPS.find(g => g.id === it.group).name}${C.STARTER[it.id] ? ' · có sẵn ' + C.STARTER[it.id] : ''}</small></td><td>${it.price}</td><td>${it.style}</td><td>${it.need ? `${it.needN} ${C.KINDS[it.need]}` : '—'}</td></tr>`).join('')}</tbody>
+        </table>
+        <p class="hint">Cấp: ${C.LEVELS.map((s, k) => `cấp ${k + 1} từ ${s}`).join(' · ')} phong cách.</p>
+      </aside>
+    </div>`;
+  }
+  async function loadCornerStats() {
+    const C = CornerData;
+    cnLoading = true; render();
+    try {
+      const docs = Store.online() ? await Cloud.listCorners() : Object.values(C.localAll());
+      const st = { n: docs.length, active: 0, xu: 0, spent: 0, levels: C.LEVELS.map(() => 0), gifts: 0, giftCost: 0 };
+      docs.map(C.normalize).forEach(d => {
+        if (d.xu) st.active++;
+        st.xu += d.xu || 0; st.spent += d.spent || 0;
+        st.levels[C.level(d) - 1]++;
+        Object.keys(d.gifts).forEach(L => { st.gifts++; const it = MenuAdmin.adminList().find(x => x.id === C.cfg().gifts[L]); st.giftCost += it ? it.price : 0; });
+      });
+      cnStats = st;
+    } catch (e) { toast('⚠️ ' + (typeof Cloud !== 'undefined' ? Cloud.niceError(e) : e)); }
+    cnLoading = false; render();
+  }
+  function submitCorner(f) {
+    const rate = +f.get('rate'), firstBonus = Math.round(+f.get('firstBonus'));
+    if (!(rate >= 0 && rate <= 10)) { toast('Xu mỗi 1.000đ: từ 0 đến 10'); return; }
+    if (!(firstBonus >= 0 && firstBonus <= 200)) { toast('Thưởng lần đầu: từ 0 đến 200 xu'); return; }
+    const gifts = {};
+    CornerData.GIFT_LEVELS.forEach(L => { gifts[L] = f.get('gift' + L) || ''; });
+    MenuAdmin.setCorner({ enabled: !!f.get('enabled'), rate, firstBonus, gifts });
+    toast('Đã lưu cấu hình Góc quán');
+  }
+
   function formCfg() {
     const f = document.getElementById('pointsForm');
     if (!f) return null;
@@ -387,6 +463,7 @@
         toast('Đã thêm quà');
         return;
       }
+      case 'cnStats': loadCornerStats(); return;
       case 'ptReset': if (confirm('Khôi phục cấu hình điểm mặc định?')) { MenuAdmin.resetPoints(); toast('Đã về cấu hình điểm mặc định'); } return;
     }
   });
@@ -437,6 +514,7 @@
       toast(`Đã thêm "${name}" vào menu`);
     } else if (form.id === 'promoForm') submitPromo(f);
     else if (form.id === 'pointsForm') submitPoints();
+    else if (form.id === 'cornerForm') submitCorner(f);
   });
 
   function submitPromo(f) {
@@ -481,7 +559,7 @@
   const live = () => {
     if ($m.classList.contains('hidden')) return;
     const a = document.activeElement;
-    if (a && $m.contains(a) && (a.id === 'mmSearch' || a.closest('#pointsForm') || a.closest('.modal'))) {
+    if (a && $m.contains(a) && (a.id === 'mmSearch' || a.closest('#pointsForm') || a.closest('#cornerForm') || a.closest('.modal'))) {
       if (sub === 'items') refreshItems();
       return;
     }

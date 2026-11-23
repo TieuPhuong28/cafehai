@@ -60,7 +60,14 @@ const Store = (() => {
           if (status === 'xong') await Cloud.completeOrder(o, patch);
           else await Cloud.updateOrder(id, patch);
         } catch (e) { reportError(e); }
-      } else writeLocal(local().map(x => (x.id === id ? { ...x, ...patch } : x)));
+      } else {
+        // Bản demo: hoàn tất đơn thì cộng xu Góc quán (theo số điện thoại) ngay trên máy này
+        if (status === 'xong' && o.status !== 'xong' && typeof CornerData !== 'undefined') {
+          try { const g = CornerData.creditLocal(o); if (g) patch.xu = g.xu; }
+          catch (e) { reportError(e); return; }
+        }
+        writeLocal(local().map(x => (x.id === id ? { ...x, ...patch } : x)));
+      }
     },
     clear() {
       if (online()) return;

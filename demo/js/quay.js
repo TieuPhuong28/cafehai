@@ -71,7 +71,7 @@ function card(o) {
     <div class="items">
       ${o.items.map(it => `
         <div class="item">
-          <b>${it.qty} × ${esc(it.name)}</b>${it.reward ? '<span class="g gift">🎁 quà đổi điểm</span>' : ''}${it.played ? `<span class="g">🎮 khách tự pha${it.stars ? ' ' + '★'.repeat(it.stars) : ''}${it.points ? ` · ${(it.points * it.qty).toLocaleString('vi-VN')} điểm` : ''}</span>` : it.points ? `<span class="g q">${(it.points * it.qty).toLocaleString('vi-VN')} điểm</span>` : ''}
+          <b>${it.qty} × ${esc(it.name)}</b>${it.gift ? `<span class="g gift">🏠 quà Góc quán cấp ${it.gift}</span>` : it.reward ? '<span class="g gift">🎁 quà đổi điểm</span>' : ''}${it.played ? `<span class="g">🎮 khách tự pha${it.stars ? ' ' + '★'.repeat(it.stars) : ''}${it.points ? ` · ${(it.points * it.qty).toLocaleString('vi-VN')} điểm` : ''}</span>` : it.points ? `<span class="g q">${(it.points * it.qty).toLocaleString('vi-VN')} điểm</span>` : ''}
           ${it.opts.length ? `<div class="recipe">${it.opts.map(x => `<span>${esc(x.label)}: ${esc(x.value)}</span>`).join('')}</div>` : ''}
           ${it.note ? `<div class="nt">📝 ${esc(it.note)}</div>` : ''}
         </div>`).join('')}
@@ -86,12 +86,21 @@ function card(o) {
   </div>`;
 }
 
+function cornerLine(o) {
+  if (typeof CornerData === 'undefined' || !CornerData.cfg().enabled) return '';
+  if (Store.online() && !o.uid) return '';
+  const gifts = (o.cornerGifts || []).length ? ` · <b>🎁 quà cấp ${o.cornerGifts.join(', ')}: quầy kiểm tra cấp khi hoàn tất</b>` : '';
+  if (o.status === 'xong') return o.xu != null ? `<div class="onote member-q">🏠 Góc quán · đã cộng ${o.xu.toLocaleString('vi-VN')} xu</div>` : '';
+  if (o.status === 'huy') return '';
+  return `<div class="onote member-q">🏠 Góc quán · +${CornerData.estimate(o.total).toLocaleString('vi-VN')} xu khi hoàn tất${gifts}</div>`;
+}
+
 function memberLine(o) {
-  if (!Store.online()) return '';
+  if (!Store.online()) return cornerLine(o);
   const earn = o.items.reduce((a, it) => a + (it.points || 0) * it.qty, 0);
   if (!o.uid) return '<div class="onote member-q guest">Khách vãng lai · không tích điểm</div>';
-  if (o.status === 'xong') return `<div class="onote member-q">👤 Thành viên · ${o.credited ? `đã cộng ${(o.earned || 0).toLocaleString('vi-VN')} điểm` : 'chưa cộng điểm'}${o.redeem ? ` · đã trừ ${o.redeem.toLocaleString('vi-VN')} điểm đổi quà` : ''}</div>`;
-  return `<div class="onote member-q">👤 Thành viên · +${earn.toLocaleString('vi-VN')} điểm khi hoàn tất${o.redeem ? ` · <b>🎁 trừ ${o.redeem.toLocaleString('vi-VN')} điểm đổi quà</b>` : ''}</div>`;
+  if (o.status === 'xong') return `<div class="onote member-q">👤 Thành viên · ${o.credited ? `đã cộng ${(o.earned || 0).toLocaleString('vi-VN')} điểm` : 'chưa cộng điểm'}${o.redeem ? ` · đã trừ ${o.redeem.toLocaleString('vi-VN')} điểm đổi quà` : ''}</div>${cornerLine(o)}`;
+  return `<div class="onote member-q">👤 Thành viên · +${earn.toLocaleString('vi-VN')} điểm khi hoàn tất${o.redeem ? ` · <b>🎁 trừ ${o.redeem.toLocaleString('vi-VN')} điểm đổi quà</b>` : ''}</div>${cornerLine(o)}`;
 }
 
 function render(list = Store.all()) {

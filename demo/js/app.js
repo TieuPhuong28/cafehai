@@ -98,6 +98,7 @@ const hasFreeFruit = d => d.steps.some(s => s.type === 'fruit' && s.free);
 function go(view, extra = {}) {
   if (state.view === 'game' && view !== 'game') Brew.unmount();
   if (state.view === 'cut' && view !== 'cut') FruitCut.unmount();
+  if (state.view === 'corner' && view !== 'corner') Corner.leave();
   Object.assign(state, extra, { view });
   render();
   window.scrollTo(0, 0);
@@ -116,7 +117,8 @@ function render() {
     v === 'track' ? trackView() :
     v === 'orders' ? ordersView() :
     v === 'rank' ? Board.html(state.lbPeriod) :
-    v === 'account' ? Account.view() : '';
+    v === 'account' ? Account.view() :
+    v === 'corner' ? Corner.view() : '';
   if (v === 'game') Brew.mount();
   if (v === 'cut') FruitCut.mount();
   if (v === 'scene') Scene.after();
@@ -327,8 +329,8 @@ function cartView() {
     ${state.cart.map(it => `
       <div class="cart-item">
         <div class="ci-main">
-          <div class="ci-name">${it.name}${it.reward ? ' <span class="pill">🎁 Quà đổi điểm</span>' : ''}${!D(it.id) || D(it.id).soldOut ? ' <span class="pill huy">Vừa hết</span>' : ''}</div>
-          ${it.reward ? `<div class="ci-game">🎁 Đổi bằng ${(it.cost * it.qty).toLocaleString('vi-VN')} điểm</div>` : ''}
+          <div class="ci-name">${it.name}${it.gift ? ` <span class="pill">🏠 Quà Góc quán cấp ${it.gift}</span>` : it.reward ? ' <span class="pill">🎁 Quà đổi điểm</span>' : ''}${!D(it.id) || D(it.id).soldOut ? ' <span class="pill huy">Vừa hết</span>' : ''}</div>
+          ${it.reward && !it.gift ? `<div class="ci-game">🎁 Đổi bằng ${(it.cost * it.qty).toLocaleString('vi-VN')} điểm</div>` : ''}
           ${it.opts.length ? `<div class="ci-opts">${it.opts.map(o => `${o.label}: ${o.value}`).join(' · ')}</div>` : ''}
           ${it.note ? `<div class="ci-opts">📝 ${esc(it.note)}</div>` : ''}
           ${it.played ? `<div class="ci-game">🎮 Tự tay pha${it.stars ? ' · ' + '★'.repeat(it.stars) : ' · sáng tạo'}${it.points ? ` · 🏆 ${(it.points * it.qty).toLocaleString('vi-VN')} điểm` : ''}</div>` : it.points ? `<div class="ci-game quick">🏆 ${(it.points * it.qty).toLocaleString('vi-VN')} điểm (đặt nhanh, ${Math.round(POINT_CFG.quick * 100)}%)</div>` : ''}
@@ -378,6 +380,8 @@ function placeOrder() {
   if (ship && cu.address.trim().length < 6) er.address = 'Vui lòng nhập địa chỉ cụ thể';
   state.errors = er;
   if (Object.keys(er).length) { render(); toast('Vui lòng kiểm tra lại thông tin'); return; }
+  if (state.cart.some(it => it.gift) && !state.cart.some(it => !it.reward)) { toast('Quà Góc quán đi kèm đơn có món trả tiền, bạn gọi thêm 1 món nhé'); return; }
+  if (state.cart.some(it => it.gift) && Cloud.enabled && !Cloud.uid) { toast('Đăng nhập để nhận quà Góc quán'); state.afterLogin = 'cart'; go('account'); return; }
   if (Account.cartRedeem()) {
     if (!Cloud.uid) { toast('Đăng nhập để dùng điểm đổi quà'); state.afterLogin = 'cart'; go('account'); return; }
     if (Account.balance() < 0) { toast('Không đủ điểm cho quà trong giỏ, bạn bỏ bớt quà nhé'); return; }
@@ -396,6 +400,7 @@ function placeOrder() {
     total: priced.total,
     uid: Cloud.uid || null,
     redeem: Account.cartRedeem(),
+    cornerGifts: state.cart.filter(it => it.gift).map(it => it.gift),
   });
   state.myOrders.unshift(o.id);
   LS.set('cafehai.my', state.myOrders);
@@ -503,6 +508,7 @@ $app.addEventListener('click', e => {
     // --- giỏ ---
     case 'qty': {
       const it = state.cart.find(x => x.uid === el.dataset.uid);
+      if (it.gift && +el.dataset.d > 0) { toast('Mỗi mốc cấp nhận 1 phần quà'); break; }
       if (it.reward && +el.dataset.d > 0 && Account.balance() < it.cost) { toast('Chưa đủ điểm để đổi thêm'); break; }
       it.qty += +el.dataset.d;
       if (it.qty <= 0) state.cart = state.cart.filter(x => x !== it);
@@ -512,6 +518,7 @@ $app.addEventListener('click', e => {
     case 'ship': state.ship = el.dataset.v; state.errors = {}; render(); break;
     case 'order': placeOrder(); break;
     case 'acc': Account.handle(el); break;
+    case 'cn': Corner.handle(el); break;
     // --- bảng xếp hạng ---
     case 'lbPeriod': state.lbPeriod = el.dataset.id; Sfx.tap(); render(); break;
     case 'lbSeed': Board.addSeeds(); render(); toast('Đã thêm khách mẫu'); break;
@@ -540,24 +547,28 @@ Store.subscribe(list => {
       toast(`Đơn ${o.code}: ${STATUS[o.status].label}`);
     lastStatus[o.id] = o.status;
   });
-  if (['track', 'orders', 'rank'].includes(state.view)) render();
+  if (['track', 'orders', 'rank', 'corner'].includes(state.view)) render();
 });
 
 // Thông tin thành viên trong giỏ hàng
 function memberBanner() {
-  if (!Cloud.enabled) return '';
+  const xu = Corner.enabled() ? Corner.estimate(cartPrice().total) : 0;
+  const xuLine = xu ? ` · <b>+${xu.toLocaleString('vi-VN')} xu</b> cho 🏠 Góc quán` : '';
+  if (!Cloud.enabled) return xu ? `<div class="member on">🏠 <span>Đơn này <b>+${xu.toLocaleString('vi-VN')} xu</b> cho Góc quán của bạn khi quán giao xong</span></div>` : '';
   const earn = Account.cartEarn();
   if (Cloud.uid && Cloud.profile) {
-    return `<div class="member on">👤 <span><b>${esc(Cloud.profile.name)}</b> · đơn này <b>+${earn.toLocaleString('vi-VN')} điểm</b> khi hoàn tất<br><small>Điểm hiện có: ${Account.balance().toLocaleString('vi-VN')}</small></span></div>`;
+    return `<div class="member on">👤 <span><b>${esc(Cloud.profile.name)}</b> · đơn này <b>+${earn.toLocaleString('vi-VN')} điểm</b>${xuLine} khi hoàn tất<br><small>Điểm hiện có: ${Account.balance().toLocaleString('vi-VN')}</small></span></div>`;
   }
-  return `<div class="member">⭐ <span>Đăng nhập để tích <b>${earn.toLocaleString('vi-VN')} điểm</b> cho đơn này và đổi quà</span><button class="btn primary sm" data-act="acc" data-a="login">Đăng nhập</button></div>`;
+  return `<div class="member">⭐ <span>Đăng nhập để tích <b>${earn.toLocaleString('vi-VN')} điểm</b>${xu ? ` và <b>${xu.toLocaleString('vi-VN')} xu</b> Góc quán` : ''} cho đơn này</span><button class="btn primary sm" data-act="acc" data-a="login">Đăng nhập</button></div>`;
 }
 
 $app.addEventListener('submit', e => {
   if (e.target.id === 'accForm' || e.target.id === 'profForm') { e.preventDefault(); Account.submit(e.target); }
+  if (e.target.id === 'cnPhone') { e.preventDefault(); Corner.submitPhone(e.target); }
 });
 
 Account.init();
+Corner.init();
 render();
 
 // Quầy cập nhật menu → app khách cập nhật ngay

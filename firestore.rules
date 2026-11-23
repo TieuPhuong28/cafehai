@@ -52,6 +52,53 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Góc quán: bảng giá đồ (quầy tự đồng bộ từ app khi đăng nhập)
+    match /cornerShop/{item} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+
+    // Góc quán của từng khách.
+    // xu, stats, firsts, gifts: chỉ quầy cộng (khi hoàn tất đơn).
+    // Khách chỉ được: tạo góc trống, sắp xếp đồ (layout), mua đồ đúng giá trong cornerShop.
+    match /corners/{uid} {
+      function isOwner() { return signedIn() && request.auth.uid == uid; }
+      function emptyCorner() {
+        let d = request.resource.data;
+        return d.keys().hasOnly(['xu', 'spent', 'owned', 'layout', 'stats', 'firsts', 'gifts'])
+          && d.xu == 0 && d.spent == 0
+          && d.owned is map && d.owned.size() == 0
+          && d.stats is map && d.stats.size() == 0
+          && d.firsts is map && d.firsts.size() == 0
+          && d.gifts is map && d.gifts.size() == 0
+          && d.layout is list && d.layout.size() <= 24;
+      }
+      function layoutOnly() {
+        return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['layout'])
+          && request.resource.data.layout is list
+          && request.resource.data.layout.size() <= 24;
+      }
+      function validPurchase() {
+        let d = request.resource.data;
+        let o = resource.data;
+        let item = d.lastBuy;
+        let shop = get(/databases/$(database)/documents/cornerShop/$(item)).data;
+        return d.diff(o).affectedKeys().hasOnly(['spent', 'owned', 'lastBuy', 'layout'])
+          && d.owned.diff(o.owned).affectedKeys().hasOnly([item])
+          && d.owned[item] == o.owned.get(item, 0) + 1
+          && d.owned[item] <= shop.max
+          && shop.price > 0
+          && d.spent == o.spent + shop.price
+          && d.spent <= o.xu
+          && (shop.needN == 0 || o.stats.get(shop.need, 0) >= shop.needN)
+          && d.layout is list && d.layout.size() <= 24;
+      }
+      allow read: if isOwner() || isStaff();
+      allow create: if isStaff() || (isOwner() && emptyCorner());
+      allow update: if isStaff() || (isOwner() && (layoutOnly() || validPurchase()));
+      allow delete: if false;
+    }
+
     // Bảng xếp hạng: ai cũng xem, chỉ quầy ghi (khi hoàn tất đơn)
     match /scores/{id} {
       allow read: if true;

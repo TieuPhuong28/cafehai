@@ -1,6 +1,6 @@
 # Kế hoạch: "Góc quán của tôi"
 
-> Phiên bản 0.1, ngày 23/11/2026. Trạng thái: **kế hoạch, chưa làm**. Đây là phần mở rộng của app Cafe Hải (xem `KE-HOACH.md`).
+> Phiên bản 0.2, ngày 23/11/2026. Trạng thái: **đã làm phần code Giai đoạn 1 (Bản đầu)**, chưa chạy thật với khách. Đây là phần mở rộng của app Cafe Hải (xem `KE-HOACH.md`).
 
 ## 1. Mục tiêu
 
@@ -136,6 +136,16 @@ Thêm mục **"🏠 Góc quán"** trong Quản lý menu:
 | **3. Cộng đồng & mùa vụ** | Quán đẹp nhất tuần, sự kiện mùa, mở rộng tầng 2, cấp 6–10 | Liên tục | — |
 
 Nếu số liệu ở bước nào không đạt, **dừng lại sửa** chứ không làm tiếp phần sau.
+
+### Giai đoạn 1 đã làm (23/11/2026)
+- Góc quán 4×4 ô nhìn nghiêng + 8 chỗ treo tường; vào bằng cầu thang trong quán, nút 🏠, hoặc lựa chọn "Góc quán của tôi" khi nói chuyện với anh Hải. Nút "Đặt món" luôn nổi.
+- 32 món đồ (bàn ghế, trang trí, máy móc, đặc biệt), vẽ đơn giản bằng SVG/emoji. Máy móc và đồ đặc biệt mở khóa theo món thật đã mua (máy ép: 3 ly nước ép, quầy hoa quả: 1 túi/hộp quả, cold brew: 2 ly Coldbrew, kệ ly H: 5 đơn, biển H: 10 đơn, bảng vàng mini: 10 ly tự tay pha…).
+- Xu: 1 xu / 1.000đ của đơn hoàn tất + 30 xu lần đầu mua mỗi loại (cà phê, nước ép, hoa quả, chai, trà & khác). **Chỉ quầy cộng xu**, trong cùng giao dịch hoàn tất đơn; khách mua đồ được quy tắc Firestore kiểm tra giá, số xu và điều kiện mở khóa.
+- Cấp 1–5 theo tổng "phong cách" của đồ (25 / 55 / 90 / 130). Quà thật ví dụ: cấp 3 tặng Trà Chanh, cấp 5 tặng Nâu; quà vào giỏ giá 0đ, phải đi kèm món trả tiền, quầy kiểm tra cấp khi hoàn tất đơn.
+- Khách ảo ngồi trên ghế (số khách = cấp quán); báo "+N xu! Bạn vừa mở khóa …" khi đơn hoàn tất.
+- Quầy: mục **🏠 Góc quán** trong Quản lý menu (bật/tắt, tỷ lệ xu, thưởng lần đầu, quà cấp 3/5, số liệu khách theo cấp, xu đã phát/tiêu, quà đã giao).
+- **Chưa làm (để giai đoạn sau):** tip khách ảo, ca làm 2 phút, ghé thăm/mời bạn, quán đẹp nhất tuần, sự kiện mùa, mở rộng 5×5 / tầng 2, cấp 6–10, bộ hình vẽ đẹp theo quán thật.
+- Trước khi chạy với khách: dán lại `firestore.rules` lên Firebase (xem `HUONG-DAN-FIREBASE.md`), và anh Hải chốt quà thật ở mốc cấp (mục 11).
 
 ## 9. Đo lường (KPI)
 

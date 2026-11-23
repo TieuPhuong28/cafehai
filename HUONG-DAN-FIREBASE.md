@@ -40,6 +40,14 @@ Làm một lần, khoảng **10–15 phút**. Cần một tài khoản Gmail c�
 - Màn hình quầy: **https://tieuphuong28.github.io/cafehai/demo/quay.html** — cần đăng nhập nhân viên.
 - Lần đầu bật, menu/khuyến mãi trên bản online **bắt đầu từ menu gốc**; vào Quản lý menu chỉnh lại (hết hàng, giá giảm, khuyến mãi…).
 
+## Bật "Góc quán của tôi" (giai đoạn 1)
+Góc quán cần thêm quy tắc bảo mật mới. Làm **một lần** sau khi cập nhật app:
+1. **Firestore Database → Rules**: xóa nội dung cũ, dán lại toàn bộ file [`firestore.rules`](firestore.rules) → **Publish**.
+2. Mở màn hình quầy và đăng nhập nhân viên một lần: app tự đưa bảng giá đồ góc quán lên (collection `cornerShop`).
+3. Vào **Quản lý menu → 🏠 Góc quán** để chỉnh tỷ lệ xu, thưởng lần đầu và quà ở cấp 3, cấp 5 (hoặc tắt tính năng).
+
+Nếu chưa làm bước 1, quầy vẫn hoàn tất đơn bình thường nhưng **chưa cộng xu**, và khách thấy thông báo "Chưa mở được góc quán".
+
 ## Câu hỏi thường gặp
 - **Khách quên mật khẩu?** Bản hiện tại chưa tự đặt lại được. Quầy vào **Authentication → Users**, tìm `0901234567@khach.cafehai.app`, xóa tài khoản đó; khách tạo lại tài khoản mới (điểm cũ quán cộng bù bằng tay nếu cần). Bản sau có thể thêm đặt lại mật khẩu.
 - **Có tốn tiền không?** Gói miễn phí cho phép khoảng 50.000 lượt đọc và 20.000 lượt ghi mỗi ngày, quán nhỏ dùng không hết.

@@ -83,6 +83,7 @@ const Scene = (() => {
       { label: '🧃 Tự mix nước ép', fn: () => pickDrink('mix') },
       { label: '🎁 Quầy thông tin: món mới & deal', fn: openInfo },
       { label: '🏆 Bảng xếp hạng', fn: () => go('rank') },
+      Corner.enabled() ? { label: '🏠 Góc quán của tôi', fn: () => go('corner') } : null,
     ].filter(Boolean);
   }
 
@@ -386,6 +387,7 @@ const Scene = (() => {
         <div class="logo sm">${LOGO('#f3e3c3')}<div><b>CAFE HẢI</b></div></div>
         <button class="icon-btn dark" data-act="mute" aria-label="Âm thanh">${Sfx.muted ? '🔇' : '🔊'}</button>
         <button class="icon-btn dark" data-act="go" data-to="rank" aria-label="Bảng xếp hạng">🏆</button>
+        ${Corner.enabled() ? '<button class="icon-btn dark" data-act="go" data-to="corner" aria-label="Góc quán của tôi">🏠</button>' : ''}
         <button class="icon-btn dark" data-act="go" data-to="account" aria-label="Tài khoản">👤</button>
         <button class="icon-btn dark" data-act="go" data-to="cart" aria-label="Giỏ hàng">🛒${n ? `<span class="badge">${n}</span>` : ''}</button>
       </div>
@@ -395,6 +397,10 @@ const Scene = (() => {
       </button>
       ${goldBoardHTML()}
       ${infoBoardHTML()}
+      ${Corner.enabled() ? `<button class="stairs" data-act="go" data-to="corner" aria-label="Lên Góc quán của tôi">
+        <span class="st-steps"><i></i><i></i><i></i><i></i></span>
+        <span class="st-label">Góc quán<br>của tôi ⬆</span>
+      </button>` : ''}
       <div class="hai" aria-label="Anh Hải, chủ quán"></div>
       <div class="bar">
         <div class="bar-top">

@@ -11,6 +11,9 @@ window.FIREBASE_CONFIG = {
   appId: "1:436875379685:web:29fb044f53f6c17c5fe50c",
 };
 
+// Thêm ?demo vào cuối địa chỉ (vd: index.html?demo) để chạy thử chế độ DEMO dù đã có cấu hình online.
+if (/[?&]demo\b/.test(location.search)) window.FIREBASE_CONFIG = null;
+
 /* Ví dụ:
 window.FIREBASE_CONFIG = {
   apiKey: "AIza...",

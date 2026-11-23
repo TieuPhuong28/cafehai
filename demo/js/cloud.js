@@ -33,6 +33,7 @@ const Cloud = (() => {
           unsubProfile = db.doc('customers/' + u.uid).onSnapshot(s => { profile = s.exists ? s.data() : null; emit('profile', profile); }, err => console.warn('profile', err));
         }
         ready = true;
+        if (typeof CornerData !== 'undefined') { watchCorner(); if (isStaff) syncCornerShop(); }
         emit('auth', u);
       });
     } catch (e) {
@@ -86,14 +87,27 @@ const Cloud = (() => {
   const updateOrder = (id, patch) => db.doc('orders/' + id).update(clean(patch));
 
   // Hoàn tất đơn: cộng điểm (trừ điểm đổi quà) và ghi bảng xếp hạng trong cùng một giao dịch
+  // Kèm cộng xu Góc quán (corners/{uid}); nếu quy tắc Firestore chưa cập nhật thì vẫn hoàn tất đơn, bỏ qua xu.
   async function completeOrder(o, patch) {
+    const useCorner = typeof CornerData !== 'undefined' && CornerData.cfg().enabled && !!o.uid;
+    try { return await completeTx(o, patch, useCorner); }
+    catch (e) {
+      if (useCorner && String(e.code || '').includes('permission-denied') && !(o.cornerGifts || []).length) {
+        console.warn('Góc quán: chưa có quyền ghi corners, hoàn tất đơn không cộng xu', e);
+        return completeTx(o, patch, false);
+      }
+      throw e;
+    }
+  }
+  async function completeTx(o, patch, useCorner) {
     const earned = (o.items || []).reduce((a, it) => a + (it.points || 0) * it.qty, 0);
     const redeem = o.redeem || 0;
     const orderRef = db.doc('orders/' + o.id);
     if (!o.uid) return orderRef.update(clean({ ...patch, credited: false }));
     const custRef = db.doc('customers/' + o.uid);
+    const cornerRef = db.doc('corners/' + o.uid);
     return db.runTransaction(async t => {
-      const [ord, cust] = await Promise.all([t.get(orderRef), t.get(custRef)]);
+      const [ord, cust, corner] = await Promise.all([t.get(orderRef), t.get(custRef), useCorner ? t.get(cornerRef) : null]);
       if (ord.exists && ord.data().credited) { t.update(orderRef, clean(patch)); return; }
       const c = cust.exists ? cust.data() : null;
       if (redeem && (!c || (c.points || 0) < redeem)) {
@@ -101,7 +115,16 @@ const Cloud = (() => {
         err.code = 'not-enough-points';
         throw err;
       }
-      t.update(orderRef, clean({ ...patch, credited: true, earned }));
+      let xu = 0;
+      if (useCorner) {
+        const res = CornerData.credit(o, corner.exists ? corner.data() : null);
+        xu = res.gain.xu;
+        const d = res.doc;
+        const data = { xu: d.xu, stats: d.stats, firsts: d.firsts, gifts: d.gifts, at: Date.now() };
+        if (corner.exists) t.update(cornerRef, data);
+        else t.set(cornerRef, { ...CornerData.emptyDoc(), ...data });
+      }
+      t.update(orderRef, clean({ ...patch, credited: true, earned, ...(useCorner ? { xu } : {}) }));
       if (c) t.update(custRef, { points: FV.increment(earned - redeem), earned: FV.increment(earned) });
       if (earned > 0) {
         const cups = o.items.reduce((a, it) => a + (it.points ? it.qty : 0), 0);
@@ -147,8 +170,59 @@ const Cloud = (() => {
     }, err => console.warn('scores', err));
   }
 
+  // ----- Góc quán -----
+  // Khách: theo dõi góc quán của mình (tự tạo góc trống nếu chưa có)
+  let unsubCorner = null, cornerDoc = null, cornerState = 'none';
+  function watchCorner() {
+    if (unsubCorner) { unsubCorner(); unsubCorner = null; }
+    cornerDoc = null; cornerState = 'none';
+    if (!enabled || !user || !isCustomerEmail(user.email)) { emit('corner', null); return; }
+    cornerState = 'loading';
+    const ref = db.doc('corners/' + user.uid);
+    unsubCorner = ref.onSnapshot(s => {
+      if (!s.exists) {
+        cornerState = 'creating';
+        ref.set(CornerData.emptyDoc()).catch(e => { cornerState = 'error'; console.warn('corner create', e); emit('corner', null); });
+        return;
+      }
+      cornerDoc = s.data(); cornerState = 'ok';
+      emit('corner', cornerDoc);
+    }, err => { cornerState = 'error'; console.warn('corner', err); emit('corner', null); });
+  }
+  // Mua đồ: quy tắc Firestore kiểm tra giá (cornerShop), xu còn lại và điều kiện mở khóa
+  function buyCorner(id, price, layout) {
+    const patch = { spent: FV.increment(price), ['owned.' + id]: FV.increment(1), lastBuy: id };
+    if (layout) patch.layout = layout;
+    return db.doc('corners/' + user.uid).update(patch);
+  }
+  const saveCornerLayout = layout => db.doc('corners/' + user.uid).update({ layout });
+
+  // Quầy: đưa bảng giá đồ lên Firestore để quy tắc bảo mật kiểm tra khi khách mua
+  async function syncCornerShop() {
+    if (!enabled || !isStaff || typeof CornerData === 'undefined') return;
+    try {
+      const cur = {};
+      (await db.collection('cornerShop').get()).docs.forEach(d => { cur[d.id] = d.data(); });
+      const batch = db.batch();
+      let n = 0;
+      CornerData.ITEMS.forEach(it => {
+        const want = { price: it.price, need: it.need || '', needN: it.needN || 0, max: it.max - (CornerData.STARTER[it.id] || 0) };
+        const c = cur[it.id];
+        if (!c || Object.keys(want).some(k => c[k] !== want[k])) { batch.set(db.doc('cornerShop/' + it.id), want); n++; }
+      });
+      if (n) await batch.commit();
+    } catch (e) { console.warn('Góc quán: chưa đồng bộ được bảng giá đồ (kiểm tra firestore.rules)', e); }
+  }
+  async function listCorners() {
+    const s = await db.collection('corners').limit(1000).get();
+    return s.docs.map(d => d.data());
+  }
+
   return {
     enabled, on, niceError,
+    get corner() { return cornerDoc; },
+    get cornerState() { return cornerState; },
+    watchCorner, buyCorner, saveCornerLayout, syncCornerShop, listCorners,
     get ready() { return ready; },
     get user() { return user; },
     get uid() { return user && isCustomerEmail(user.email) ? user.uid : null; },
