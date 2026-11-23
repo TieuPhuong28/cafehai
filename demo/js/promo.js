@@ -8,7 +8,14 @@ const Promo = (() => {
   const save = list => {
     try { localStorage.setItem(KEY, JSON.stringify(list)); } catch {}
     listeners.forEach(fn => fn(false));
+    if (typeof Cloud !== 'undefined' && Cloud.enabled) Cloud.saveConfig('promos', list);
   };
+  if (typeof Cloud !== 'undefined' && Cloud.enabled) {
+    Cloud.watchConfig('promos', v => {
+      try { localStorage.setItem(KEY, JSON.stringify(v || [])); } catch {}
+      listeners.forEach(fn => fn(true));
+    });
+  }
   window.addEventListener('storage', e => { if (e.key === KEY) listeners.forEach(fn => fn(true)); });
 
   // ----- khung giờ -----
@@ -52,7 +59,7 @@ const Promo = (() => {
 
   // Tính giá cả giỏ: combo trước (tiết kiệm nhiều nhất trước), phần còn lại áp giảm giá món
   function price(cart) {
-    const pool = cart.map(it => ({ it, d: findItem(it.id), left: it.qty }));
+    const pool = cart.filter(it => !it.reward).map(it => ({ it, d: findItem(it.id), left: it.qty }));
     const combos = [];
     load().filter(p => p.type === 'combo' && live(p) && p.items.every(x => findItem(x.id) && !findItem(x.id).soldOut))
       .map(p => ({ p, saving: comboBase(p) - p.price }))
@@ -77,6 +84,7 @@ const Promo = (() => {
       itemDiscount += disc;
       lines[e.it.uid] = { base, unit: u.price, promo: disc > 0 ? u.promo.title : null, inCombo: e.it.qty - e.left, total: base * e.it.qty - disc };
     });
+    cart.filter(it => it.reward).forEach(it => { lines[it.uid] = { base: 0, unit: 0, promo: null, inCombo: 0, total: 0 }; });
     const comboDiscount = combos.reduce((a, c) => a + c.saving, 0);
     return { lines, combos, subtotal, itemDiscount, comboDiscount, discount: itemDiscount + comboDiscount, total: subtotal - itemDiscount - comboDiscount };
   }

@@ -369,3 +369,32 @@ input, select, textarea { font: inherit; color: inherit; }
 .ci-game.quick { color: var(--muted); }
 .quick-pts { margin: 0 16px 12px; padding: 10px 14px; border-radius: 14px; background: #fff1d6; border: 1px solid #f2c77a; color: #7a4a00; font-size: 14px; text-align: center; }
 .quick-pts span { font-size: 13px; color: var(--brown); }
+
+/* ===== Tài khoản ===== */
+.acc-hero { display: flex; gap: 12px; align-items: center; margin: 14px 16px 0; padding: 14px; border-radius: 16px; background: var(--brown); color: #f3e3c3; }
+.acc-hero b { display: block; font-size: 17px; color: #fff; }
+.acc-hero span { font-size: 13px; }
+.acc-card { display: flex; align-items: center; gap: 12px; margin: 14px 16px 0; padding: 14px 16px; border-radius: 18px; background: linear-gradient(135deg, #4a2016, #7a2e1f); color: #fff; box-shadow: var(--shadow); }
+.acc-ava { width: 50px; height: 50px; border-radius: 50%; background: #f2b632; color: #4a2016; font-weight: 900; font-size: 22px; display: grid; place-items: center; flex: none; }
+.acc-info { flex: 1; min-width: 0; }
+.acc-info b { display: block; font-size: 17px; }
+.acc-info span { font-size: 13px; opacity: .85; }
+.acc-pts { text-align: right; }
+.acc-pts small { display: block; font-size: 11px; opacity: .8; }
+.acc-pts b { font-size: 24px; color: #ffd76a; }
+.acc-sub { display: flex; flex-direction: column; gap: 3px; margin: 8px 18px 0; font-size: 13px; color: var(--muted); }
+.rw { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px dashed var(--line); }
+.rw:last-of-type { border-bottom: 0; }
+.rw-main { flex: 1; min-width: 0; }
+.rw-main b { color: var(--brown); }
+.rw-main small { display: block; color: var(--muted); font-size: 12.5px; }
+.rw-bar { height: 6px; border-radius: 3px; background: #efe5d2; margin-top: 5px; overflow: hidden; }
+.rw-bar i { display: block; height: 100%; background: linear-gradient(90deg, #f2b632, #e8434f); }
+.rw .btn { flex: none; padding: 8px 14px; }
+.muted-p { color: var(--muted); font-size: 14px; margin: 6px 0; }
+.small-p { font-size: 12.5px; }
+.err-p { color: var(--danger); font-size: 13.5px; font-weight: 600; margin: 4px 0 10px; }
+.member { display: flex; align-items: center; gap: 10px; margin: 12px 16px 0; padding: 10px 14px; border-radius: 14px; background: #fff4dc; border: 1px solid #f2d391; font-size: 14px; color: #6a4300; }
+.member span { flex: 1; }
+.member.on { background: #eaf5e6; border-color: #cfe6c8; color: #2f6a2a; }
+.member .btn { flex: none; padding: 8px 12px; }

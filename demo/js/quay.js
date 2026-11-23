@@ -71,18 +71,27 @@ function card(o) {
     <div class="items">
       ${o.items.map(it => `
         <div class="item">
-          <b>${it.qty} × ${esc(it.name)}</b>${it.played ? `<span class="g">🎮 khách tự pha${it.stars ? ' ' + '★'.repeat(it.stars) : ''}${it.points ? ` · ${(it.points * it.qty).toLocaleString('vi-VN')} điểm` : ''}</span>` : it.points ? `<span class="g q">${(it.points * it.qty).toLocaleString('vi-VN')} điểm</span>` : ''}
+          <b>${it.qty} × ${esc(it.name)}</b>${it.reward ? '<span class="g gift">🎁 quà đổi điểm</span>' : ''}${it.played ? `<span class="g">🎮 khách tự pha${it.stars ? ' ' + '★'.repeat(it.stars) : ''}${it.points ? ` · ${(it.points * it.qty).toLocaleString('vi-VN')} điểm` : ''}</span>` : it.points ? `<span class="g q">${(it.points * it.qty).toLocaleString('vi-VN')} điểm</span>` : ''}
           ${it.opts.length ? `<div class="recipe">${it.opts.map(x => `<span>${esc(x.label)}: ${esc(x.value)}</span>`).join('')}</div>` : ''}
           ${it.note ? `<div class="nt">📝 ${esc(it.note)}</div>` : ''}
         </div>`).join('')}
     </div>
     ${o.note ? `<div class="onote">💬 ${esc(o.note)}</div>` : ''}
     ${o.discount ? `<div class="onote sale">🎁 ${esc((o.promos || []).join(', '))} · giảm ${fmt(o.discount)}</div>` : ''}
+    ${memberLine(o)}
     <div class="ofoot">
       <div class="total">${fmt(o.total)}<small>${ship ? 'COD · chưa gồm ship' : 'Thu tại quầy'}</small></div>
       <div class="acts">${actions(o)}</div>
     </div>
   </div>`;
+}
+
+function memberLine(o) {
+  if (!Store.online()) return '';
+  const earn = o.items.reduce((a, it) => a + (it.points || 0) * it.qty, 0);
+  if (!o.uid) return '<div class="onote member-q guest">Khách vãng lai · không tích điểm</div>';
+  if (o.status === 'xong') return `<div class="onote member-q">👤 Thành viên · ${o.credited ? `đã cộng ${(o.earned || 0).toLocaleString('vi-VN')} điểm` : 'chưa cộng điểm'}${o.redeem ? ` · đã trừ ${o.redeem.toLocaleString('vi-VN')} điểm đổi quà` : ''}</div>`;
+  return `<div class="onote member-q">👤 Thành viên · +${earn.toLocaleString('vi-VN')} điểm khi hoàn tất${o.redeem ? ` · <b>🎁 trừ ${o.redeem.toLocaleString('vi-VN')} điểm đổi quà</b>` : ''}</div>`;
 }
 
 function render(list = Store.all()) {

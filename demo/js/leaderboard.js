@@ -39,6 +39,9 @@ const Board = (() => {
 
   // Mỗi bản ghi: { phone, name, points, cups, best, at }
   function entries() {
+    if (typeof Cloud !== 'undefined' && Cloud.enabled) {
+      return Cloud.scores.map(s => ({ phone: s.pid, name: displayName(s), points: s.points, cups: s.cups || 0, best: s.best || 0, at: s.at }));
+    }
     const out = [];
     Store.all().forEach(o => {
       if (o.status !== 'xong') return;
@@ -67,8 +70,9 @@ const Board = (() => {
 
   // Điểm đang chờ (đơn chưa hoàn tất) của một khách
   function pending(phone) {
+    const online = typeof Cloud !== 'undefined' && Cloud.enabled;
     return Store.all()
-      .filter(o => o.customer.phone === phone && !['xong', 'huy'].includes(o.status))
+      .filter(o => (online ? o.uid === phone : o.customer.phone === phone) && !['xong', 'huy'].includes(o.status))
       .reduce((a, o) => a + orderPoints(o), 0);
   }
 
@@ -100,13 +104,14 @@ const Board = (() => {
   // ----- Giao diện -----
   function html(period) {
     const list = rank(period);
-    const me = state.customer.phone ? state.customer.phone.replace(/\s/g, '') : '';
+    const online = typeof Cloud !== 'undefined' && Cloud.enabled;
+    const me = online ? (Cloud.uid || '') : state.customer.phone ? state.customer.phone.replace(/\s/g, '') : '';
     const myIdx = list.findIndex(p => p.phone === me);
     const top = list.slice(0, 3);
     const podiumOrder = [top[1], top[0], top[2]];
     const medal = ['🥇', '🥈', '🥉'];
     const pend = me ? pending(me) : 0;
-    const hasSeeds = seeds().length > 0;
+    const hasSeeds = !online && seeds().length > 0;
 
     const podium = top.length ? `
       <div class="podium">
@@ -135,7 +140,7 @@ const Board = (() => {
         <div>${myIdx >= 0 ? `Hạng của bạn: <b>#${myIdx + 1}</b> · ${num(list[myIdx].points)} điểm` : 'Bạn chưa có điểm trong kỳ này'}</div>
         ${pend ? `<small>⏳ ${num(pend)} điểm đang chờ, sẽ cộng khi đơn hoàn tất</small>` : ''}
         ${myIdx > 0 ? `<small>Còn ${num(list[myIdx - 1].points - list[myIdx].points + 1)} điểm nữa để vượt ${esc(list[myIdx - 1].name)}!</small>` : ''}
-      </div>` : `<div class="lb-me"><small>Đặt đơn đầu tiên để có tên trên bảng nhé!</small></div>`;
+      </div>` : online ? `<div class="lb-me"><small>Đăng nhập rồi đặt đơn để có tên trên bảng vàng!</small><button class="btn sm" style="margin-top:6px;background:#f2b632;color:#4a2016" data-act="acc" data-a="login">Đăng nhập / Tạo tài khoản</button></div>` : `<div class="lb-me"><small>Đặt đơn đầu tiên để có tên trên bảng nhé!</small></div>`;
 
     return `
     ${topbar('🏆 Bảng xếp hạng', 'Cao thủ pha chế Cafe Hải')}
@@ -157,7 +162,7 @@ const Board = (() => {
     </div>
     <div style="padding:0 16px 20px;display:flex;flex-direction:column;gap:8px">
       <button class="btn primary block" data-act="go" data-to="scene">🎮 Vào quán pha kiếm điểm</button>
-      <button class="btn ghost" data-act="${hasSeeds ? 'lbClear' : 'lbSeed'}">${hasSeeds ? 'Xóa khách mẫu (demo)' : 'Thêm khách mẫu để xem thử (demo)'}</button>
+      ${online ? '' : `<button class="btn ghost" data-act="${hasSeeds ? 'lbClear' : 'lbSeed'}">${hasSeeds ? 'Xóa khách mẫu (demo)' : 'Thêm khách mẫu để xem thử (demo)'}</button>`}
     </div>`;
   }
 

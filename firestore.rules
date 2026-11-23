@@ -1,0 +1,61 @@
+rules_version = '2';
+
+// Quy tắc bảo mật Firestore cho app Cafe Hải.
+// Dán toàn bộ file này vào Firebase Console → Firestore Database → Rules → Publish.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isStaff() {
+      return signedIn() && exists(/databases/$(database)/documents/staff/$(request.auth.uid));
+    }
+
+    // Menu, khuyến mãi, cấu hình điểm, quà: ai cũng xem, chỉ quầy sửa
+    match /config/{doc} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+
+    // Danh sách nhân viên quầy: chỉ tạo/sửa trong Firebase Console
+    match /staff/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    // Đơn hàng
+    match /orders/{orderId} {
+      // Ai có mã đơn (chuỗi ngẫu nhiên dài) thì xem được trạng thái đơn của mình
+      allow get: if true;
+      // Danh sách: quầy xem tất cả; khách chỉ xem đơn gắn với tài khoản của mình
+      allow list: if isStaff() || (signedIn() && resource.data.uid == request.auth.uid);
+      // Khách tạo đơn mới (có hoặc không đăng nhập)
+      allow create: if request.resource.data.status == 'moi'
+        && request.resource.data.id == orderId
+        && (request.resource.data.uid == null || (signedIn() && request.resource.data.uid == request.auth.uid))
+        && request.resource.data.get('credited', false) == false
+        && request.resource.data.items is list
+        && request.resource.data.items.size() > 0
+        && request.resource.data.items.size() <= 30;
+      // Chỉ quầy đổi trạng thái, cộng điểm, xóa
+      allow update, delete: if isStaff();
+    }
+
+    // Tài khoản khách: điểm chỉ quầy được cộng/trừ
+    match /customers/{uid} {
+      allow read: if (signedIn() && request.auth.uid == uid) || isStaff();
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.points == 0
+        && request.resource.data.earned == 0;
+      allow update: if isStaff()
+        || (signedIn() && request.auth.uid == uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'nick', 'hide']));
+      allow delete: if false;
+    }
+
+    // Bảng xếp hạng: ai cũng xem, chỉ quầy ghi (khi hoàn tất đơn)
+    match /scores/{id} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+  }
+}

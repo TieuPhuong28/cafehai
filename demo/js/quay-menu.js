@@ -251,6 +251,21 @@
           <span class="muted">${custom ? 'Đang dùng cấu hình riêng' : 'Đang dùng mặc định'} · áp dụng cho các ly đặt từ lúc lưu</span>
         </div>
       </form>
+      <section class="pts-form rewards-box">
+        <h4>🎁 Đổi điểm lấy quà <small>khách tự đổi trong mục Tài khoản (bản online)</small></h4>
+        ${MenuAdmin.rewards().map(r => {
+          const d = MENU.find(x => x.id === r.itemId) || MenuAdmin.adminList().find(x => x.id === r.itemId);
+          return `<div class="rw-row"><span>${d ? escM(d.name) : '(món đã xóa)'}<small>${d ? d.price + 'K' : ''}</small></span>
+            <label><input type="number" min="100" step="100" value="${r.cost}" data-m="rwCost" data-id="${r.id}" aria-label="Điểm đổi">điểm</label>
+            ${ic(false, 'rwDel', r.id, '🗑', 'Xóa quà')}</div>`;
+        }).join('') || '<p class="hint">Chưa có quà nào.</p>'}
+        <div class="rw-add">
+          <select id="rwItem">${itemOptions(false)}</select>
+          <input id="rwNewCost" type="number" min="100" step="100" placeholder="Số điểm">
+          <button class="btn light" type="button" data-m="rwAdd">＋ Thêm quà</button>
+        </div>
+        <p class="hint">Gợi ý: với 1.000đ = ${POINT_CFG.perK} điểm, đặt quà bằng khoảng 10 lần giá món (ly 20K ≈ ${(20 * POINT_CFG.perK * 10).toLocaleString('vi-VN')} điểm) là khách được ~10% giá trị.</p>
+      </section>
       <aside class="pts-preview">
         <h4>Xem trước <small>tự tính theo số đang nhập</small></h4>
         <div id="ptsPreview"></div>
@@ -364,6 +379,14 @@
       case 'pToggle': Promo.toggle(id); return;
       case 'pDel': if (confirm('Xóa khuyến mãi này?')) Promo.remove(id); return;
       case 'pSamples': Promo.addSamples(); toast('Đã thêm khuyến mãi mẫu'); return;
+      case 'rwDel': if (confirm('Xóa quà này?')) MenuAdmin.setRewards(MenuAdmin.rewards().filter(r => r.id !== id)); return;
+      case 'rwAdd': {
+        const itemId = document.getElementById('rwItem').value, cost = Math.round(+document.getElementById('rwNewCost').value);
+        if (!(cost >= 100)) { toast('Nhập số điểm (từ 100)'); return; }
+        MenuAdmin.setRewards(MenuAdmin.rewards().concat([{ id: 'r' + Date.now().toString(36), itemId, cost }]));
+        toast('Đã thêm quà');
+        return;
+      }
       case 'ptReset': if (confirm('Khôi phục cấu hình điểm mặc định?')) { MenuAdmin.resetPoints(); toast('Đã về cấu hình điểm mặc định'); } return;
     }
   });
@@ -381,6 +404,12 @@
       const k = Math.round(+v);
       if (!(k >= 1 && k < d.price)) { toast(`Giá giảm phải thấp hơn giá bán (${d.price}K)`); refreshItems(); return; }
       MenuAdmin.setSale(id, k); toast(`${d.name}: giảm còn ${k}K`);
+    }
+    if (t.dataset.m === 'rwCost') {
+      const c = Math.round(+t.value);
+      if (!(c >= 100)) { toast('Số điểm từ 100'); render(); return; }
+      MenuAdmin.setRewards(MenuAdmin.rewards().map(r => (r.id === id ? { ...r, cost: c } : r)));
+      toast('Đã đổi số điểm');
     }
     if (t.dataset.m === 'price') {
       const p = Math.round(+t.value);

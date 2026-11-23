@@ -386,7 +386,7 @@ const Scene = (() => {
         <div class="logo sm">${LOGO('#f3e3c3')}<div><b>CAFE HẢI</b></div></div>
         <button class="icon-btn dark" data-act="mute" aria-label="Âm thanh">${Sfx.muted ? '🔇' : '🔊'}</button>
         <button class="icon-btn dark" data-act="go" data-to="rank" aria-label="Bảng xếp hạng">🏆</button>
-        <button class="icon-btn dark" data-act="go" data-to="orders" aria-label="Đơn của tôi">📋</button>
+        <button class="icon-btn dark" data-act="go" data-to="account" aria-label="Tài khoản">👤</button>
         <button class="icon-btn dark" data-act="go" data-to="cart" aria-label="Giỏ hàng">🛒${n ? `<span class="badge">${n}</span>` : ''}</button>
       </div>
       <button class="wall-menu" data-act="board" aria-label="Xem menu trên tường">

@@ -5,7 +5,7 @@ const MenuAdmin = (() => {
   const BASE = MENU.map(d => ({ ...d })); // menu gốc trong menu.js
   const listeners = [];
 
-  const empty = () => ({ soldOut: {}, hidden: {}, price: {}, isNew: {}, fruitOut: {}, sale: {}, featured: {}, points: null, custom: [] });
+  const empty = () => ({ soldOut: {}, hidden: {}, price: {}, isNew: {}, fruitOut: {}, sale: {}, featured: {}, points: null, rewards: null, custom: [] });
   function load() {
     try { return { ...empty(), ...(JSON.parse(localStorage.getItem(KEY)) || {}) }; } catch { return empty(); }
   }
@@ -13,6 +13,7 @@ const MenuAdmin = (() => {
     try { localStorage.setItem(KEY, JSON.stringify(s)); } catch {}
     apply();
     listeners.forEach(fn => fn());
+    if (typeof Cloud !== 'undefined' && Cloud.enabled) Cloud.saveConfig('menu', s);
   }
   const update = fn => { const s = load(); fn(s); save(s); };
 
@@ -92,7 +93,26 @@ const MenuAdmin = (() => {
 
   apply();
 
+  // Chế độ online: menu lấy từ Firestore (quầy ghi, khách đọc)
+  if (typeof Cloud !== 'undefined' && Cloud.enabled) {
+    Cloud.watchConfig('menu', v => {
+      try { localStorage.setItem(KEY, JSON.stringify(v || empty())); } catch {}
+      apply();
+      listeners.forEach(fn => fn(true));
+    });
+  }
+
+  // Quà đổi bằng điểm (quầy chỉnh được)
+  const DEFAULT_REWARDS = [
+    { id: 'r1', itemId: 'nau', cost: 20000 },
+    { id: 'r2', itemId: 'xiumuoi', cost: 25000 },
+    { id: 'r3', itemId: 'tuinho', cost: 30000 },
+  ];
+  const rewards = () => load().rewards || DEFAULT_REWARDS;
+
   return {
+    rewards,
+    setRewards: list => update(s => { s.rewards = list; }),
     load, update, apply, adminList, allFruits, fruitOut, BASE,
     onChange: fn => listeners.push(fn),
     setSoldOut: (id, v) => update(s => { v ? (s.soldOut[id] = true) : delete s.soldOut[id]; }),

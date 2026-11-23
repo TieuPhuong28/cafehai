@@ -30,5 +30,9 @@ Bấm "Bật chuông báo đơn" ở quầy để nghe tiếng báo khi có đơ
 | `js/quay-menu.js` | Quầy → tab "Quản lý menu": hoa quả hôm nay, hết hàng, đổi giá, ẩn món, thêm món mới |
 | `js/promo.js` | Khuyến mãi & deal: giảm giá món/nhóm (theo khung giờ), combo, thông báo; tự tính giá trong giỏ |
 | `js/menuadmin.js` | Lưu các thay đổi menu của quầy và áp dụng cho app khách |
+| `js/firebase-config.js` | **Dán cấu hình Firebase vào đây** để bật bản online (để `null` = chế độ demo) |
+| `js/cloud.js` | Kết nối Firebase: đăng nhập, đơn hàng, menu, khuyến mãi, điểm, bảng xếp hạng |
+| `js/account.js` | Tài khoản khách: đăng nhập SĐT + mật khẩu, điểm, đổi quà |
+| `js/quay-cloud.js` | Đăng nhập nhân viên cho màn hình quầy (bản online) |
 | `js/store.js` | Lưu đơn + đồng bộ giữa các tab |
 | `assets/` | Ảnh quán (menu, đồ uống, hộp quả, chủ quán) |

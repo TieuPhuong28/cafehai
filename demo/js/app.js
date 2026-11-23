@@ -115,7 +115,8 @@ function render() {
     v === 'cart' ? cartView() :
     v === 'track' ? trackView() :
     v === 'orders' ? ordersView() :
-    v === 'rank' ? Board.html(state.lbPeriod) : '';
+    v === 'rank' ? Board.html(state.lbPeriod) :
+    v === 'account' ? Account.view() : '';
   if (v === 'game') Brew.mount();
   if (v === 'cut') FruitCut.mount();
   if (v === 'scene') Scene.after();
@@ -147,7 +148,7 @@ function listView() {
   <div class="topbar">
     <button class="icon-btn" data-act="back" data-to="scene" aria-label="Vào quán">🏠</button>
     <div class="logo">${LOGO()}<div><b>CAFE HẢI</b><small>Cà phê đậm vị – Ngon đúng gu!</small></div></div>
-    <button class="icon-btn" data-act="go" data-to="orders" aria-label="Đơn của tôi">📋</button>
+    <button class="icon-btn" data-act="go" data-to="account" aria-label="Tài khoản">👤</button>
     ${cartIcon()}
   </div>
   <div class="hero"><div class="txt"><b>🎮 Tự pha – Tự gọi</b><span>Bấm "Pha" để vào quầy pha chế, ly bạn pha chính là đơn bạn đặt</span></div></div>
@@ -326,7 +327,8 @@ function cartView() {
     ${state.cart.map(it => `
       <div class="cart-item">
         <div class="ci-main">
-          <div class="ci-name">${it.name}${!D(it.id) || D(it.id).soldOut ? ' <span class="pill huy">Vừa hết</span>' : ''}</div>
+          <div class="ci-name">${it.name}${it.reward ? ' <span class="pill">🎁 Quà đổi điểm</span>' : ''}${!D(it.id) || D(it.id).soldOut ? ' <span class="pill huy">Vừa hết</span>' : ''}</div>
+          ${it.reward ? `<div class="ci-game">🎁 Đổi bằng ${(it.cost * it.qty).toLocaleString('vi-VN')} điểm</div>` : ''}
           ${it.opts.length ? `<div class="ci-opts">${it.opts.map(o => `${o.label}: ${o.value}`).join(' · ')}</div>` : ''}
           ${it.note ? `<div class="ci-opts">📝 ${esc(it.note)}</div>` : ''}
           ${it.played ? `<div class="ci-game">🎮 Tự tay pha${it.stars ? ' · ' + '★'.repeat(it.stars) : ' · sáng tạo'}${it.points ? ` · 🏆 ${(it.points * it.qty).toLocaleString('vi-VN')} điểm` : ''}</div>` : it.points ? `<div class="ci-game quick">🏆 ${(it.points * it.qty).toLocaleString('vi-VN')} điểm (đặt nhanh, ${Math.round(POINT_CFG.quick * 100)}%)</div>` : ''}
@@ -339,6 +341,7 @@ function cartView() {
       </div>`).join('')}
     <button class="btn light" style="margin-top:10px;width:100%" data-act="go" data-to="scene">+ Gọi thêm món</button>
   </div>
+  ${memberBanner()}
   <div class="panel">
     <h3>Nhận hàng</h3>
     <div class="seg">
@@ -348,14 +351,15 @@ function cartView() {
     <label class="field"><span>Tên của bạn</span><input data-cu="name" value="${esc(cu.name)}" placeholder="VD: Minh Anh">${er.name ? `<span class="err">${er.name}</span>` : ''}</label>
     <label class="field"><span>Số điện thoại</span><input data-cu="phone" inputmode="tel" value="${esc(cu.phone)}" placeholder="09xx xxx xxx">${er.phone ? `<span class="err">${er.phone}</span>` : ''}</label>
     ${ship ? `<label class="field"><span>Địa chỉ giao hàng</span><textarea data-cu="address" rows="2" placeholder="Số nhà, ngõ, đường, phường...">${esc(cu.address)}</textarea>${er.address ? `<span class="err">${er.address}</span>` : ''}</label>` : ''}
-    <label class="field"><span>Biệt danh trên bảng vàng <i style="font-weight:400">(không bắt buộc)</i></span><input data-cu="nick" maxlength="20" value="${esc(cu.nick)}" placeholder="Mặc định dùng tên của bạn"></label>
-    <label class="check"><input type="checkbox" data-cu="hide" ${cu.hide ? 'checked' : ''}> Ẩn tên tôi trên bảng xếp hạng (hiện là "Khách bí ẩn")</label>
+    ${Cloud.enabled ? '' : `<label class="field"><span>Biệt danh trên bảng vàng <i style="font-weight:400">(không bắt buộc)</i></span><input data-cu="nick" maxlength="20" value="${esc(cu.nick)}" placeholder="Mặc định dùng tên của bạn"></label>
+    <label class="check"><input type="checkbox" data-cu="hide" ${cu.hide ? 'checked' : ''}> Ẩn tên tôi trên bảng xếp hạng (hiện là "Khách bí ẩn")</label>`}
     <label class="field"><span>Ghi chú đơn hàng</span><input id="oNote" value="${esc(state.note)}" placeholder="VD: gọi trước khi giao"></label>
   </div>
   <div class="panel">
     <div class="sum-row"><span>Tạm tính</span><span>${fmt(pr.subtotal)}</span></div>
     ${pr.combos.map(c => `<div class="sum-row sale"><span>🔥 ${esc(c.title)}${c.times > 1 ? ` ×${c.times}` : ''}</span><span>−${fmt(c.saving)}</span></div>`).join('')}
     ${pr.itemDiscount ? `<div class="sum-row sale"><span>🏷️ Giảm giá món</span><span>−${fmt(pr.itemDiscount)}</span></div>` : ''}
+    ${Account.cartRedeem() ? `<div class="sum-row sale"><span>🎁 Dùng điểm đổi quà</span><span>−${Account.cartRedeem().toLocaleString('vi-VN')} điểm</span></div>` : ''}
     <div class="sum-row"><span>Phí giao hàng</span><span>${ship ? 'Quán báo khi gọi xác nhận' : '0đ'}</span></div>
     <div class="sum-row total"><span>Tổng${ship ? ' (chưa gồm ship)' : ''}</span><span>${fmt(pr.total)}</span></div>
     ${pr.discount ? `<div class="sum-row sale" style="justify-content:center;font-weight:700">🎉 Bạn tiết kiệm ${fmt(pr.discount)}</div>` : ''}
@@ -374,6 +378,10 @@ function placeOrder() {
   if (ship && cu.address.trim().length < 6) er.address = 'Vui lòng nhập địa chỉ cụ thể';
   state.errors = er;
   if (Object.keys(er).length) { render(); toast('Vui lòng kiểm tra lại thông tin'); return; }
+  if (Account.cartRedeem()) {
+    if (!Cloud.uid) { toast('Đăng nhập để dùng điểm đổi quà'); state.afterLogin = 'cart'; go('account'); return; }
+    if (Account.balance() < 0) { toast('Không đủ điểm cho quà trong giỏ, bạn bỏ bớt quà nhé'); return; }
+  }
   LS.set('cafehai.customer', cu);
   const priced = cartPrice();
   const o = Store.create({
@@ -386,10 +394,13 @@ function placeOrder() {
     discount: priced.discount,
     promos: priced.combos.map(c => `${c.title}${c.times > 1 ? ' ×' + c.times : ''}`).concat(priced.itemDiscount ? ['Giảm giá món'] : []),
     total: priced.total,
+    uid: Cloud.uid || null,
+    redeem: Account.cartRedeem(),
   });
   state.myOrders.unshift(o.id);
   LS.set('cafehai.my', state.myOrders);
-  LS.set('cafehai.last', state.cart.map(({ uid, ...it }) => it));
+  Account.rewatch();
+  LS.set('cafehai.last', state.cart.filter(it => !it.reward).map(({ uid, ...it }) => it));
   state.cart = []; saveCart(); state.note = '';
   lastStatus[o.id] = o.status;
   Sfx.fanfare();
@@ -432,7 +443,7 @@ function trackView() {
 }
 
 function ordersView() {
-  const mine = Store.all().filter(o => state.myOrders.includes(o.id));
+  const mine = Store.all().filter(o => state.myOrders.includes(o.id) || (Cloud.uid && o.uid === Cloud.uid));
   return `
   ${topbar('Đơn của tôi')}
   ${mine.length ? `<div class="panel">${mine.map(o => `
@@ -492,6 +503,7 @@ $app.addEventListener('click', e => {
     // --- giỏ ---
     case 'qty': {
       const it = state.cart.find(x => x.uid === el.dataset.uid);
+      if (it.reward && +el.dataset.d > 0 && Account.balance() < it.cost) { toast('Chưa đủ điểm để đổi thêm'); break; }
       it.qty += +el.dataset.d;
       if (it.qty <= 0) state.cart = state.cart.filter(x => x !== it);
       saveCart(); render();
@@ -499,6 +511,7 @@ $app.addEventListener('click', e => {
     }
     case 'ship': state.ship = el.dataset.v; state.errors = {}; render(); break;
     case 'order': placeOrder(); break;
+    case 'acc': Account.handle(el); break;
     // --- bảng xếp hạng ---
     case 'lbPeriod': state.lbPeriod = el.dataset.id; Sfx.tap(); render(); break;
     case 'lbSeed': Board.addSeeds(); render(); toast('Đã thêm khách mẫu'); break;
@@ -530,6 +543,21 @@ Store.subscribe(list => {
   if (['track', 'orders', 'rank'].includes(state.view)) render();
 });
 
+// Thông tin thành viên trong giỏ hàng
+function memberBanner() {
+  if (!Cloud.enabled) return '';
+  const earn = Account.cartEarn();
+  if (Cloud.uid && Cloud.profile) {
+    return `<div class="member on">👤 <span><b>${esc(Cloud.profile.name)}</b> · đơn này <b>+${earn.toLocaleString('vi-VN')} điểm</b> khi hoàn tất<br><small>Điểm hiện có: ${Account.balance().toLocaleString('vi-VN')}</small></span></div>`;
+  }
+  return `<div class="member">⭐ <span>Đăng nhập để tích <b>${earn.toLocaleString('vi-VN')} điểm</b> cho đơn này và đổi quà</span><button class="btn primary sm" data-act="acc" data-a="login">Đăng nhập</button></div>`;
+}
+
+$app.addEventListener('submit', e => {
+  if (e.target.id === 'accForm' || e.target.id === 'profForm') { e.preventDefault(); Account.submit(e.target); }
+});
+
+Account.init();
 render();
 
 // Quầy cập nhật menu → app khách cập nhật ngay
