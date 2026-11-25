@@ -221,3 +221,6 @@
 .item .g.gift { color: #b06a00; }
 .rw-row b.bad { color: var(--danger); }
 .rw-row > b { text-align: right; }
+.nt-row .btn { flex: none; }
+.nt-dot { font-style: normal; display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 5px; margin-right: 4px; }
+.nt-yellow { background: #fff1a8; } .nt-pink { background: #ffd1dc; } .nt-blue { background: #cfe8ff; } .nt-green { background: #d6f2c7; }

@@ -57,6 +57,7 @@
       ['promos', '🎁 Khuyến mãi', `${s.promos} bật`],
       ['points', '🏆 Điểm số', POINT_CFG === null ? '' : (MenuAdmin.load().points ? 'tùy chỉnh' : 'mặc định')],
       ['corner', '🏠 Góc quán', CornerData.cfg().enabled ? 'bật' : 'tắt'],
+      ['notes', '💬 Lời nhắn', QuanData.pending().length ? QuanData.pending().length + ' chờ duyệt' : ''],
     ];
     $m.innerHTML = `
     <div class="mm-top">
@@ -72,7 +73,7 @@
     <nav class="subnav">${tabs.map(([id, label, badge]) => `
       <button class="${sub === id ? 'on' : ''}" data-m="sub" data-id="${id}">${label}${badge ? `<small>${badge}</small>` : ''}</button>`).join('')}
     </nav>
-    <div id="mmBody">${sub === 'items' ? itemsHTML(s) : sub === 'fruits' ? fruitsHTML() : sub === 'promos' ? promosHTML() : sub === 'corner' ? cornerHTML() : pointsHTML()}</div>
+    <div id="mmBody">${sub === 'items' ? itemsHTML(s) : sub === 'fruits' ? fruitsHTML() : sub === 'promos' ? promosHTML() : sub === 'corner' ? cornerHTML() : sub === 'notes' ? notesHTML() : pointsHTML()}</div>
     ${modal ? modalHTML() : ''}`;
     if (sub === 'points') updatePreview();
     if (modal) setTimeout(() => $m.querySelector('.modal input, .modal select')?.focus(), 30);
@@ -439,6 +440,27 @@
     return `<div class="modal-ov" data-m="closeBg"><div class="modal" role="dialog" aria-modal="true">${body}</div></div>`;
   }
 
+  // ===================== lời nhắn Quán chung =====================
+  function notesHTML() {
+    if (Store.online()) return '<section class="pts-form rewards-box"><h4>💬 Lời nhắn</h4><p class="hint">Bản thử: tường lời nhắn mới chạy ở chế độ demo. Bản online làm ở bước sau.</p></section>';
+    const Q = QuanData, pend = Q.pending();
+    const ok = Q.notes().filter(n => n.status === 'ok').sort((a, b) => b.pin - a.pin || b.at - a.at);
+    const hidden = Q.notes().filter(n => n.status === 'an');
+    const when = t => new Date(t).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
+    const row = (n, acts) => `<div class="rw-row nt-row"><span><i class="nt-dot nt-${n.color}">${n.icon}</i> “${escM(n.text)}”<small>${escM(n.name)} · ${when(n.at)}${n.reply ? ' · Trả lời: ' + escM(n.reply) : ''}${n.pin ? ' · 📌 đang ghim' : ''}</small></span>${acts}</div>`;
+    return `
+      <section class="pts-form rewards-box">
+        <h4>⏳ Chờ duyệt <small>${pend.length} lời nhắn</small></h4>
+        <p class="hint">Chỉ lời nhắn được duyệt mới hiện trên tường Quán chung. Lời nhắn thường tự gỡ sau 2 tuần, lời nhắn được ghim thì giữ lại.</p>
+        ${pend.map(n => row(n, `<button class="btn green sm" data-m="ntOk" data-id="${n.id}">Duyệt</button><button class="btn danger sm" data-m="ntHide" data-id="${n.id}">Ẩn</button>`)).join('') || '<p class="hint">Không có lời nhắn nào đang chờ 👍</p>'}
+      </section>
+      <section class="pts-form rewards-box">
+        <h4>📌 Đang trên tường <small>${ok.length}</small></h4>
+        ${ok.map(n => row(n, `<button class="btn sm" data-m="ntPin" data-id="${n.id}">${n.pin ? 'Bỏ ghim' : 'Ghim'}</button><button class="btn sm" data-m="ntReply" data-id="${n.id}">Trả lời</button><button class="btn danger sm" data-m="ntHide" data-id="${n.id}">Gỡ</button>`)).join('') || '<p class="hint">Tường đang trống.</p>'}
+      </section>
+      ${hidden.length ? `<section class="pts-form rewards-box"><h4>🙈 Đã ẩn <small>${hidden.length}</small></h4>${hidden.map(n => row(n, `<button class="btn sm" data-m="ntOk" data-id="${n.id}">Đăng lại</button>`)).join('')}</section>` : ''}`;
+  }
+
   // ===================== thao tác =====================
   $m.addEventListener('click', e => {
     const b = e.target.closest('[data-m]');
@@ -474,6 +496,15 @@
         return;
       }
       case 'cnStats': loadCornerStats(); return;
+      case 'ntOk': QuanData.setNote(id, { status: 'ok', at: Date.now() }); toast('Đã đăng lời nhắn lên tường'); render(); return;
+      case 'ntHide': QuanData.setNote(id, { status: 'an', pin: false }); toast('Đã ẩn lời nhắn'); render(); return;
+      case 'ntPin': { const n = QuanData.notes().find(x => x.id === id); QuanData.setNote(id, { pin: !n.pin }); render(); return; }
+      case 'ntReply': {
+        const n = QuanData.notes().find(x => x.id === id);
+        const r = prompt('Anh Hải trả lời (để trống để xóa trả lời):', n.reply || '');
+        if (r !== null) { QuanData.setNote(id, { reply: r.trim().slice(0, 80) }); render(); }
+        return;
+      }
       case 'ptReset': if (confirm('Khôi phục cấu hình điểm mặc định?')) { MenuAdmin.resetPoints(); toast('Đã về cấu hình điểm mặc định'); } return;
     }
   });
@@ -576,6 +607,7 @@
     render();
   };
   MenuAdmin.onChange(live);
+  QuanData.onChange(() => { if (sub === 'notes') live(); });
   Promo.onChange(live);
 
   if (ss.get('cafehai.qtab', 'orders') === 'menu') document.querySelector('.qtabs [data-tab="menu"]').click();

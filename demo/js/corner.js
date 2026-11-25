@@ -129,7 +129,7 @@ const Corner = (() => {
 
   // ---------- giao diện ----------
   function view() {
-    const head = d => topbar('🏠 Góc quán của tôi', d ? `Cấp ${C.level(d)} · ${num(C.balance(d))} xu` : 'Mỗi đơn thật = xu để trang trí');
+    const head = d => topbar('🛋️ Góc riêng của tôi', d ? `Cấp ${C.level(d)} · ${num(C.balance(d))} xu` : 'Mỗi đơn thật = xu để trang trí', 'quan');
     if (!enabled()) return `${head()}<div class="empty"><div>🏠</div>Quán đang tạm tắt Góc quán.<br>Bạn vẫn đặt món bình thường nhé!</div>${orderFab()}`;
     if (online() && !Cloud.ready) return `${head()}<div class="empty"><div>⏳</div>Đang tải…</div>`;
     if (online() && !Cloud.uid) return `${head()}${pitch()}

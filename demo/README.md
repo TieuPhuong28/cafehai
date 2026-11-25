@@ -38,5 +38,8 @@ Bấm "Bật chuông báo đơn" ở quầy để nghe tiếng báo khi có đơ
 | `js/quay-cloud.js` | Đăng nhập nhân viên cho màn hình quầy (bản online) |
 | `js/store.js` | Lưu đơn + đồng bộ giữa các tab |
 | `js/corner-data.js` | **Góc quán**: danh sách đồ, giá xu, điểm phong cách, cấp quán, điều kiện mở khóa, cách cộng xu khi hoàn tất đơn |
-| `js/corner.js` | Màn "Góc quán của tôi" của khách: phòng 4×4, cửa hàng đồ, kho, quà cấp |
+| `js/corner.js` | Màn "Góc riêng của tôi" của khách (vào từ Quán chung): phòng 4×4, cửa hàng đồ, kho, quà cấp |
+| `js/quan-data.js` | **Quán chung** (bản thử): bàn và mini game, khách ngồi theo đơn hôm nay, hạng VIP theo chi tiêu, lời nhắn, kỷ lục tuần, khách mẫu |
+| `js/quan.js`, `css/quan.css` | Màn "Quán chung" của khách: tường (bảng vàng, bảng phấn, lời nhắn), 4 bàn có mini game (Đố vui, Lật thẻ, Tự pha, Cắt quả), tủ đồ |
+| `js/outfit.js` | Nhân vật toàn thân vẽ theo lớp trang phục (mũ, áo, quần/váy, giày dép, phụ kiện), danh mục đồ mua bằng xu, đồ VIP, mua và mặc đồ |
 | `assets/` | Ảnh quán (menu, đồ uống, hộp quả, chủ quán) |

@@ -99,6 +99,7 @@ function go(view, extra = {}) {
   if (state.view === 'game' && view !== 'game') Brew.unmount();
   if (state.view === 'cut' && view !== 'cut') FruitCut.unmount();
   if (state.view === 'corner' && view !== 'corner') Corner.leave();
+  if (state.view === 'quan' && view !== 'quan') Quan.leave();
   Object.assign(state, extra, { view });
   render();
   window.scrollTo(0, 0);
@@ -118,7 +119,8 @@ function render() {
     v === 'orders' ? ordersView() :
     v === 'rank' ? Board.html(state.lbPeriod) :
     v === 'account' ? Account.view() :
-    v === 'corner' ? Corner.view() : '';
+    v === 'corner' ? Corner.view() :
+    v === 'quan' ? Quan.view() : '';
   if (v === 'game') Brew.mount();
   if (v === 'cut') FruitCut.mount();
   if (v === 'scene') Scene.after();
@@ -519,6 +521,7 @@ $app.addEventListener('click', e => {
     case 'order': placeOrder(); break;
     case 'acc': Account.handle(el); break;
     case 'cn': Corner.handle(el); break;
+    case 'qc': Quan.handle(el); break;
     // --- bảng xếp hạng ---
     case 'lbPeriod': state.lbPeriod = el.dataset.id; Sfx.tap(); render(); break;
     case 'lbSeed': Board.addSeeds(); render(); toast('Đã thêm khách mẫu'); break;
@@ -547,7 +550,7 @@ Store.subscribe(list => {
       toast(`Đơn ${o.code}: ${STATUS[o.status].label}`);
     lastStatus[o.id] = o.status;
   });
-  if (['track', 'orders', 'rank', 'corner'].includes(state.view)) render();
+  if (['track', 'orders', 'rank', 'corner'].includes(state.view) || (state.view === 'quan' && !Quan.playing())) render();
 });
 
 // Thông tin thành viên trong giỏ hàng
@@ -565,10 +568,12 @@ function memberBanner() {
 $app.addEventListener('submit', e => {
   if (e.target.id === 'accForm' || e.target.id === 'profForm') { e.preventDefault(); Account.submit(e.target); }
   if (e.target.id === 'cnPhone') { e.preventDefault(); Corner.submitPhone(e.target); }
+  if (e.target.id === 'qcPhone' || e.target.id === 'qcNote') { e.preventDefault(); Quan.submit(e.target); }
 });
 
 Account.init();
 Corner.init();
+Quan.init();
 render();
 
 // Quầy cập nhật menu → app khách cập nhật ngay
